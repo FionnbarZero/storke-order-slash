@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, RotateCcw } from 'lucide-react'
+import {
+  grade2AcquisitionStrategy,
+  type AcquisitionStrategy,
+  type AcquisitionTargetSet,
+} from './acquisition'
 import StrokeOrderSlay, {
   type LearningGameSummary,
+  type StrokeOrderAcquisitionTarget,
   type StrokeOrderGameRound,
 } from './gameModules/stroke-order-slay'
 
@@ -33,6 +39,42 @@ const rounds: readonly StrokeOrderGameRound[] = [
     ],
   },
 ]
+
+function acquisitionTarget(
+  round: StrokeOrderGameRound,
+  id: string,
+  datasetId: string,
+): StrokeOrderAcquisitionTarget {
+  return {
+    id,
+    text: round.targetText,
+    sentence: '',
+    datasetId,
+    language: 'mandarin',
+    tier: 'tier-1',
+    activityType: 'dictation',
+    strokeRoundId: round.id,
+  }
+}
+
+const demoDatasetId = 'stroke-order-acquisition-demo-v1'
+const familiarDtTargets = rounds.slice(0, 3).map((round) =>
+  acquisitionTarget(round, `stroke-familiar-${round.targetId}`, '__stroke-familiar-dt__'))
+const acquisitionTargets = [
+  acquisitionTarget(rounds[3], 'stroke-target-person', demoDatasetId),
+]
+
+const strokeAcquisitionStrategy = {
+  ...grade2AcquisitionStrategy,
+  id: 'stroke-order-acquisition-v1',
+  version: 1,
+  familiarDtTargets,
+} as const satisfies AcquisitionStrategy<StrokeOrderAcquisitionTarget>
+
+const strokeAcquisitionTargetSet = {
+  id: demoDatasetId,
+  targets: acquisitionTargets,
+} as const satisfies AcquisitionTargetSet<StrokeOrderAcquisitionTarget>
 
 const recordings: Readonly<Record<string, string>> = {
   '一': `${import.meta.env.BASE_URL}audio/mandarin/one.wav`,
@@ -104,6 +146,10 @@ export function App() {
     return <StrokeOrderSlay
       key={session}
       rounds={rounds}
+      acquisition={{
+        targetSet: strokeAcquisitionTargetSet,
+        strategy: strokeAcquisitionStrategy,
+      }}
       playAudio={playAudio}
       onExit={returnHome}
       onComplete={(result) => {
@@ -117,7 +163,7 @@ export function App() {
     <section className="standalone-card">
       <p className="standalone-kicker">Touch-writing ninja training</p>
       <h1>Stroke-order Slay</h1>
-      <p>Trace the animated guide, hide it, write the character from memory, and compare your work.</p>
+      <p>Learn 人 through Acquisition using 一, 二, and 三 as Familiar DTs. Timers, Expanded Trials, and Correction are controlled by the extracted engine.</p>
       {summary && <div className="standalone-summary" role="status">
         <strong>{summary.correct}/{summary.attempted} mastered</strong>
         <span>Your latest training run is complete.</span>

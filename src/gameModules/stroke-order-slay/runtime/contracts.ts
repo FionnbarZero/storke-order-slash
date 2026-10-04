@@ -1,3 +1,9 @@
+import type {
+  AcquisitionStrategy,
+  AcquisitionTarget,
+  AcquisitionTargetSet,
+} from '../../../acquisition/index.ts'
+
 export type LearningGameId = 'copy-hide-write-combo'
 
 export type LearningGameChannel = 'tier-1-writing' | 'tier-2-reading'
@@ -28,6 +34,15 @@ export type StrokePoint = readonly [x: number, y: number]
 export type StrokeOrderGameRound = GamePrompt & {
   readonly meaning: string
   readonly strokes: readonly (readonly StrokePoint[])[]
+}
+
+export type StrokeOrderAcquisitionTarget = AcquisitionTarget & {
+  readonly strokeRoundId: string
+}
+
+export type StrokeOrderAcquisitionConfig = {
+  readonly targetSet: AcquisitionTargetSet<StrokeOrderAcquisitionTarget>
+  readonly strategy: AcquisitionStrategy<StrokeOrderAcquisitionTarget>
 }
 
 export type LearningGameAttempt = {

@@ -8,10 +8,18 @@ import {
   type SetStateAction,
 } from 'react'
 import { Brush, Eraser, EyeOff, Play, RotateCcw, Save, Undo2, Volume2 } from 'lucide-react'
+import {
+  revealAcquisition,
+  startAcquisition,
+  transitionAcquisition,
+  type EngineAcquisitionFlow,
+} from '../../acquisition/index.ts'
 import type {
   LearningGameAttempt,
   LearningGameBaseProps,
   PlayLearningAudio,
+  StrokeOrderAcquisitionConfig,
+  StrokeOrderAcquisitionTarget,
   StrokeOrderGameRound,
   StrokePoint,
 } from './runtime/contracts'
@@ -211,20 +219,64 @@ function DrawingTools({ drawing, setDrawing }: {
   </div>
 }
 
+type AcquisitionRevealMethod = 'timer' | 'skip_timer' | 'manual_compare'
+
+function PromptCountdown({ promptId, durationSeconds, active, onComplete }: {
+  readonly promptId: string
+  readonly durationSeconds: number
+  readonly active: boolean
+  readonly onComplete: () => void
+}) {
+  const [seconds, setSeconds] = useState(durationSeconds)
+  const onCompleteRef = useRef(onComplete)
+  useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
+  useEffect(() => {
+    setSeconds(durationSeconds)
+    if (!active) return
+    let remaining = durationSeconds
+    const timer = window.setInterval(() => {
+      remaining -= 1
+      setSeconds(Math.max(0, remaining))
+      if (remaining <= 0) {
+        window.clearInterval(timer)
+        onCompleteRef.current()
+      }
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [active, durationSeconds, promptId])
+  return <>{seconds}s</>
+}
+
+function promptLabel(kind: NonNullable<EngineAcquisitionFlow['prompt']>['kind']) {
+  if (kind === 'familiar-dt') return 'Familiar DT'
+  if (kind === 'earned-dt') return 'Earned DT'
+  if (kind === 'show-copy') return 'Show & copy'
+  return 'Acquisition target'
+}
+
+function phaseLabel(phase: EngineAcquisitionFlow['phase']) {
+  if (phase === 'expanded-trials') return 'Expanded Trials'
+  if (phase === 'correction') return 'Correction'
+  return 'Introduction'
+}
+
 export function StrokeOrderSlay({
   rounds,
+  acquisition,
   playAudio,
   title = 'Stroke-order Slay',
-  eyebrow = 'Tier 1 · Touch Writing',
+  eyebrow = 'Tier 1 · Acquisition',
   onExit,
   onAttempt,
   onComplete,
 }: LearningGameBaseProps & {
   readonly rounds: readonly StrokeOrderGameRound[]
+  readonly acquisition: StrokeOrderAcquisitionConfig
   readonly playAudio?: PlayLearningAudio
 }) {
-  const [index, setIndex] = useState(0)
-  const [phase, setPhase] = useState<StrokePhase>('trace')
+  const [flow, setFlow] = useState<EngineAcquisitionFlow<StrokeOrderAcquisitionTarget>>(() =>
+    startAcquisition(acquisition.targetSet, acquisition.strategy, Math.random))
+  const [phase, setPhase] = useState<StrokePhase>(flow.prompt?.kind === 'show-copy' ? 'trace' : 'write')
   const [traceDrawing, setTraceDrawing] = useState<InkDrawing>([])
   const [memoryDrawing, setMemoryDrawing] = useState<InkDrawing>([])
   const [savedDrawing, setSavedDrawing] = useState<InkDrawing>([])
@@ -233,11 +285,31 @@ export function StrokeOrderSlay({
   const [narrationState, setNarrationState] = useState<NarrationState>('idle')
   const [attempts, setAttempts] = useState<readonly LearningGameAttempt[]>([])
   const [feedback, setFeedback] = useState<AssessmentFeedback | null>(null)
+  const [pendingFlow, setPendingFlow] = useState<EngineAcquisitionFlow<StrokeOrderAcquisitionTarget> | null>(null)
+  const [revealMethod, setRevealMethod] = useState<AcquisitionRevealMethod>('manual_compare')
   const narrationRequestRef = useRef(0)
-  const round = rounds[index]
+  const prompt = flow.prompt
+  const round = prompt ? rounds.find((candidate) => candidate.id === prompt.word.strokeRoundId) : undefined
   const valid = validStrokeOrderRounds(rounds)
-  const complete = valid && index >= rounds.length
+    && acquisition.targetSet.targets.length > 0
+    && [...acquisition.targetSet.targets, ...acquisition.strategy.familiarDtTargets]
+      .every((target) => rounds.some((candidate) => candidate.id === target.strokeRoundId))
+  const complete = valid && flow.complete && flow.teachingComplete
   const remainingTraceStrokes = round ? Math.max(0, round.strokes.length - traceDrawing.length) : 0
+  const targetIds = new Set(acquisition.targetSet.targets.map((target) => target.id))
+  const mastered = flow.earnedDtPool.filter((target) => targetIds.has(target.id)).length
+  const targetCompleted = Boolean(prompt && pendingFlow?.earnedDtPool.some((target) => target.id === prompt.word.id)
+    && !flow.earnedDtPool.some((target) => target.id === prompt.word.id))
+  const correctFeedbackTitle = targetCompleted
+    ? 'Target acquired!'
+    : prompt?.kind === 'familiar-dt'
+      ? 'Familiar DT complete.'
+      : prompt?.kind === 'earned-dt'
+        ? 'Earned DT retained.'
+        : 'Correct — keep going.'
+  const correctFeedbackDetail = targetCompleted
+    ? 'This character is now available as an Earned DT.'
+    : 'The engine selected the next Acquisition presentation.'
 
   const playCurrentNarration = useCallback(() => {
     if (!round || !playAudio) return
@@ -251,41 +323,76 @@ export function StrokeOrderSlay({
         if (request === narrationRequestRef.current) setNarrationState('error')
       },
     )
-  }, [playAudio, round])
+  }, [playAudio, prompt?.id, round])
 
   useEffect(() => {
     playCurrentNarration()
     return () => { narrationRequestRef.current += 1 }
-  }, [index, narrationKey, playCurrentNarration])
+  }, [narrationKey, playCurrentNarration])
 
   useEffect(() => {
-    if (!feedback) return
+    if (!prompt) return
+    setPhase(prompt.kind === 'show-copy' ? 'trace' : 'write')
+    setTraceDrawing([])
+    setMemoryDrawing([])
+    setSavedDrawing([])
+    setAnimationKey((current) => current + 1)
+    setRevealMethod('manual_compare')
+  }, [prompt?.id])
+
+  useEffect(() => {
+    if (!feedback || !pendingFlow) return
     const timer = window.setTimeout(() => {
-      if (feedback === 'correct') setIndex((current) => current + 1)
-      else setNarrationKey((current) => current + 1)
-      setPhase('trace')
-      setTraceDrawing([])
-      setMemoryDrawing([])
-      setSavedDrawing([])
-      setAnimationKey((current) => current + 1)
+      setFlow(pendingFlow)
+      setPendingFlow(null)
       setFeedback(null)
     }, feedback === 'correct' ? 1000 : 1900)
     return () => window.clearTimeout(timer)
-  }, [feedback])
+  }, [feedback, pendingFlow])
+
+  function completeShowCopy(method: AcquisitionRevealMethod) {
+    if (!prompt || prompt.kind !== 'show-copy' || feedback) return
+    const transition = transitionAcquisition(
+      revealAcquisition(flow),
+      acquisition.targetSet,
+      acquisition.strategy,
+      { correct: true, revealMethod: method },
+      Math.random,
+    )
+    playGameSound('progress')
+    setFlow(transition.nextFlow)
+  }
+
+  function revealHidden(method: AcquisitionRevealMethod) {
+    if (!prompt || prompt.kind === 'show-copy' || phase !== 'write' || feedback) return
+    setSavedDrawing(memoryDrawing.map((stroke) => [...stroke]))
+    setRevealMethod(method)
+    setFlow((current) => revealAcquisition(current))
+    setPhase('compare')
+    playGameSound('progress')
+  }
 
   function assess(correct: boolean) {
-    if (!round || feedback || !savedDrawing.length) return
+    if (!round || !prompt || feedback || phase !== 'compare') return
     const attempt: LearningGameAttempt = {
       gameId: 'copy-hide-write-combo',
-      promptId: round.id,
-      targetId: round.targetId,
+      promptId: prompt.id,
+      targetId: prompt.word.id,
       correct,
       response: savedDrawing.map(serializeStroke),
       assessmentMode: 'self-assessment',
     }
+    const transition = transitionAcquisition(
+      flow,
+      acquisition.targetSet,
+      acquisition.strategy,
+      { correct, revealMethod },
+      Math.random,
+    )
     setAttempts((current) => [...current, attempt])
     onAttempt?.(attempt)
     playGameSound(correct ? 'correct' : 'incorrect')
+    setPendingFlow(transition.nextFlow)
     setFeedback(correct ? 'correct' : 'incorrect')
   }
 
@@ -294,23 +401,28 @@ export function StrokeOrderSlay({
     gameId="copy-hide-write-combo"
     title={title}
     eyebrow={eyebrow}
-    progress={`${Math.min(index + (feedback === 'correct' ? 1 : 0), rounds.length)}/${rounds.length} mastered`}
+    progress={`${mastered}/${acquisition.targetSet.targets.length} mastered`}
     onExit={onExit}
   >
     {!valid ? <LearningGameEmpty onExit={onExit} /> : complete ? <LearningGameComplete
       summary={summary}
-      message="Every stroke-order challenge is complete."
+      message="The Acquisition teaching sequence is complete. This target is now an Earned DT."
       onDone={() => onComplete(summary)}
-    /> : round ? <section className="lg-card lg-production-card lg-stroke-order-card">
-      <p className="lg-round-label">Character {index + 1} of {rounds.length}</p>
-      <div className="lg-phase-steps" aria-label={`Current step: ${phase}`}>
-        <span className={phase === 'trace' ? 'is-current' : 'is-complete'}><b>1</b>Trace order</span>
-        <span className={phase === 'write' ? 'is-current' : phase === 'compare' || feedback ? 'is-complete' : ''}><b>2</b>Hide & write</span>
-        <span className={phase === 'compare' && !feedback ? 'is-current' : feedback ? 'is-complete' : ''}><b>3</b>Compare</span>
+    /> : round && prompt ? <section className="lg-card lg-production-card lg-stroke-order-card">
+      <p className="lg-round-label">{phaseLabel(flow.phase)} · {promptLabel(prompt.kind)} · {prompt.timerSeconds}s</p>
+      <div className="lg-phase-steps" aria-label={`Current presentation: ${promptLabel(prompt.kind)}`}>
+        <span className={phase === 'trace' || phase === 'write' ? 'is-current' : 'is-complete'}><b>1</b>{prompt.kind === 'show-copy' ? 'Copy with guide' : 'Write from memory'}</span>
+        <span className={phase === 'compare' && !feedback ? 'is-current' : feedback ? 'is-complete' : ''}><b>2</b>{prompt.kind === 'show-copy' ? 'Continue' : 'Compare'}</span>
+        <span className={feedback ? 'is-current' : ''}><b>3</b>{prompt.kind === 'show-copy' ? 'Next trial' : 'Self-assess'}</span>
       </div>
-      {feedback ? <AutoAssessmentFeedback feedback={feedback} lastRound={index + 1 === rounds.length} /> : phase === 'trace' ? <>
+      {feedback ? <AutoAssessmentFeedback
+        feedback={feedback}
+        lastRound={Boolean(pendingFlow?.complete)}
+        correctTitle={correctFeedbackTitle}
+        correctDetail={correctFeedbackDetail}
+      /> : prompt.kind === 'show-copy' ? <>
         <div className="lg-stroke-heading">
-          <div><p className="lg-kicker">Follow the numbered strokes · {traceDrawing.length}/{round.strokes.length} finished</p><h2>Trace <span lang="zh-Hans">{round.targetText}</span> with your finger or stylus</h2></div>
+          <div><p className="lg-kicker">Show & copy · {traceDrawing.length}/{round.strokes.length} strokes</p><h2>Trace <span lang="zh-Hans">{round.targetText}</span> over the numbered guide</h2></div>
           <button className="lg-audio" type="button" onClick={playCurrentNarration}><Volume2 size={18} /> {narrationState === 'playing'
             ? 'Playing…'
             : narrationState === 'error' ? `Tap to hear ${round.targetText}` : 'Hear it'}</button>
@@ -319,32 +431,27 @@ export function StrokeOrderSlay({
         <div className="lg-stroke-actions">
           <DrawingTools drawing={traceDrawing} setDrawing={setTraceDrawing} />
           <button className="lg-stroke-replay" type="button" onClick={() => setAnimationKey((current) => current + 1)}><Play size={17} /> Replay stroke order</button>
+          <button className="lg-stroke-replay" type="button" onClick={() => completeShowCopy('skip_timer')}>Skip timer</button>
           <button className="lg-primary" type="button" disabled={traceDrawing.length < round.strokes.length} onClick={() => {
-            playGameSound('progress')
-            setMemoryDrawing([])
-            setPhase('write')
-          }}><EyeOff size={18} /> {remainingTraceStrokes > 0
+            completeShowCopy('manual_compare')
+          }}><Save size={18} /> {remainingTraceStrokes > 0
             ? `Lift your finger, then draw ${remainingTraceStrokes} more ${remainingTraceStrokes === 1 ? 'stroke' : 'strokes'}`
-            : 'Hide it and write'}</button>
+            : 'Copy complete'}</button>
         </div>
+        <p className="lg-round-label">Next presentation in <PromptCountdown key={`${prompt.id}:copy`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => completeShowCopy('timer')} /></p>
       </> : phase === 'write' ? <>
         <div className="lg-stroke-heading">
-          <div><p className="lg-kicker">Guide hidden</p><h2>Write the character from memory</h2></div>
-          <span className="lg-memory-seal"><Brush size={19} /> No peeking</span>
+          <div><p className="lg-kicker">{promptLabel(prompt.kind)} · guide hidden</p><h2>Listen, then write the character from memory</h2></div>
+          <span className="lg-memory-seal"><Brush size={19} /> <PromptCountdown key={`${prompt.id}:write`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => revealHidden('timer')} /></span>
         </div>
         <StrokePad round={round} strokes={memoryDrawing} onStrokesChange={setMemoryDrawing} showGuide={false} animationKey={animationKey} label={`Memory writing · ${memoryDrawing.length} strokes saved`} />
         <div className="lg-stroke-actions">
           <DrawingTools drawing={memoryDrawing} setDrawing={setMemoryDrawing} />
-          <button type="button" className="lg-stroke-replay" onClick={() => {
-            setTraceDrawing([])
-            setNarrationKey((current) => current + 1)
-            setPhase('trace')
-          }}><RotateCcw size={17} /> Back to tracing</button>
+          <button type="button" className="lg-stroke-replay" onClick={() => setNarrationKey((current) => current + 1)}><RotateCcw size={17} /> Hear it again</button>
+          <button type="button" className="lg-stroke-replay" onClick={() => revealHidden('skip_timer')}>Skip timer</button>
           <button className="lg-primary" type="button" disabled={!memoryDrawing.length} onClick={() => {
-            setSavedDrawing(memoryDrawing.map((stroke) => [...stroke]))
-            setPhase('compare')
-            playGameSound('progress')
-          }}><Save size={18} /> Save and compare</button>
+            revealHidden('manual_compare')
+          }}><EyeOff size={18} /> Save and compare</button>
         </div>
       </> : <div className="lg-stroke-review">
         <p className="lg-kicker">Your response is saved</p>
@@ -358,7 +465,7 @@ export function StrokeOrderSlay({
           ? 'Playing…'
           : narrationState === 'error' ? `Tap to hear ${round.targetText}` : `Hear ${round.targetText}`}</button>
         <p>Does your character match the shape and stroke order?</p>
-        <SelfAssessmentButtons incorrectLabel="Trace it again" correctLabel="I slayed it" onAnswer={assess} />
+        <SelfAssessmentButtons incorrectLabel="Needs correction" correctLabel="I got it" onAnswer={assess} />
       </div>}
     </section> : null}
   </LearningGameShell>
