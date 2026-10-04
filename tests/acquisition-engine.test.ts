@@ -11,6 +11,8 @@ import {
   type EngineAcquisitionFlow,
 } from '../src/acquisition/index.ts'
 import { strokeOrderIntroductionSequence } from '../src/strokeOrderAcquisition.ts'
+import { gameManifest as originalGameManifest } from '../src/gameModules/stroke-order-slay/manifest.ts'
+import { gameManifest as secondGradeGameManifest } from '../src/gameModules/stroke-oder-slash-2nd-grade/manifest.ts'
 
 const targets: AcquisitionTarget[] = [
   {
@@ -112,6 +114,12 @@ test('stroke-order Acquisition demonstrates every new character first', () => {
   assert.equal(flow.phase, 'introduction')
   assert.equal(flow.prompt?.kind, 'show-copy')
   assert.equal(flow.prompt?.word.id, targets[1].id)
+})
+
+test('the second-grade copy is registered as a distinct game module', () => {
+  assert.equal(secondGradeGameManifest.id, 'stroke-oder-slash-2nd-grade')
+  assert.equal(secondGradeGameManifest.title, 'Stroke Oder Slash 2nd grade')
+  assert.notEqual(secondGradeGameManifest.id, originalGameManifest.id)
 })
 
 test('a reviewed prompt returns an assessment for the answered prompt', () => {
