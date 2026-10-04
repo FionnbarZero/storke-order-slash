@@ -18,6 +18,8 @@ import { strokeOrderIntroductionSequence } from './strokeOrderAcquisition'
 type DemoGame = 'original' | 'second-grade'
 type DemoSummary = { readonly attempted: number; readonly correct: number }
 
+const secondGradePath = '/stroke-oder-slash-2nd-grade'
+
 const rounds: readonly StrokeOrderGameRound[] = [
   {
     id: 'stroke-one', targetId: 'one', targetText: '一', meaning: 'one', audioText: '一',
@@ -96,7 +98,7 @@ export function App() {
   const settleActiveAudio = useRef<(() => void) | null>(null)
   const [session, setSession] = useState(0)
   const [game, setGame] = useState<DemoGame>('second-grade')
-  const [playing, setPlaying] = useState(false)
+  const [playing, setPlaying] = useState(() => window.location.pathname === secondGradePath)
   const [summary, setSummary] = useState<DemoSummary | null>(null)
 
   function stopAudio() {
