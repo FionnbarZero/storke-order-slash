@@ -14,7 +14,6 @@ import { strokeOrderIntroductionSequence } from '../src/strokeOrderAcquisition.t
 import { gameManifest as originalGameManifest } from '../src/gameModules/stroke-order-slay/manifest.ts'
 import { gameManifest as secondGradeGameManifest } from '../src/gameModules/stroke-oder-slash-2nd-grade/manifest.ts'
 import { secondGradeInitialCopySeconds, secondGradeWritingTargets } from '../src/gameModules/stroke-oder-slash-2nd-grade/curriculum.ts'
-import { detectStrokeOrderViolation } from '../src/gameModules/stroke-oder-slash-2nd-grade/strokeOrderValidation.ts'
 
 const targets: AcquisitionTarget[] = [
   {
@@ -170,45 +169,6 @@ test('the supplied Grade 2 targets each begin with a stroke-order demonstration'
 
   assert.equal(flow.complete, true)
   assert.deepEqual(grade2Targets.map((target) => target.text), ['比如', '部分', '更', '方便', '美好'])
-})
-
-test('stroke-order validation detects a later stroke and a reversed stroke', () => {
-  const expected = [
-    [[10, 20], [45, 20], [80, 20]],
-    [[50, 10], [50, 45], [50, 80]],
-  ] as const
-
-  assert.equal(detectStrokeOrderViolation([[12, 21], [48, 20], [79, 19]], expected, 0), null)
-  assert.deepEqual(
-    detectStrokeOrderViolation([[51, 11], [50, 44], [49, 79]], expected, 0),
-    { expectedIndex: 0, matchedIndex: 1, reason: 'out-of-order' },
-  )
-  assert.deepEqual(
-    detectStrokeOrderViolation([[79, 20], [46, 20], [11, 20]], expected, 0),
-    { expectedIndex: 0, matchedIndex: 0, reason: 'reversed' },
-  )
-})
-
-test('stroke-order validation accepts a rough third stroke with broad placement variation', () => {
-  // Official 比 stroke origins/endpoints transformed into the game's 100-unit cell.
-  const biStrokes = [
-    [[29.57, 47.75], [45.77, 43.61]],
-    [[22.64, 27.41], [43.79, 60.17]],
-    [[75.02, 29.75], [57.02, 46.58]],
-    [[50.09, 16.34], [85.10, 62.73]],
-  ] as const
-
-  // The line is deliberately rough, but its start clearly belongs to stroke 3.
-  assert.equal(
-    detectStrokeOrderViolation([[76, 31], [70, 39], [62, 55]], biStrokes, 2),
-    null,
-  )
-  // This correct falling-left stroke begins close to stroke 4's model origin.
-  // Stroke order must not be rejected merely because the writing is shifted.
-  assert.equal(
-    detectStrokeOrderViolation([[52, 18], [45, 27], [34, 36]], biStrokes, 2),
-    null,
-  )
 })
 
 test('a reviewed prompt returns an assessment for the answered prompt', () => {

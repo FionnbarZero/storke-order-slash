@@ -7,7 +7,6 @@ export {
   secondGradeRounds,
   secondGradeTargetSet,
 } from './demoConfig'
-export { detectStrokeOrderViolation, type StrokeOrderViolation } from './strokeOrderValidation'
 export type {
   LearningGameAttempt,
   LearningGameBaseProps,
