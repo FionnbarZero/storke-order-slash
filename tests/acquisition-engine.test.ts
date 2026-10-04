@@ -14,6 +14,7 @@ import { strokeOrderIntroductionSequence } from '../src/strokeOrderAcquisition.t
 import { gameManifest as originalGameManifest } from '../src/gameModules/stroke-order-slay/manifest.ts'
 import { gameManifest as secondGradeGameManifest } from '../src/gameModules/stroke-oder-slash-2nd-grade/manifest.ts'
 import { secondGradeInitialCopySeconds, secondGradeWritingTargets } from '../src/gameModules/stroke-oder-slash-2nd-grade/curriculum.ts'
+import { detectStrokeOrderViolation } from '../src/gameModules/stroke-oder-slash-2nd-grade/strokeOrderValidation.ts'
 
 const targets: AcquisitionTarget[] = [
   {
@@ -169,6 +170,23 @@ test('the supplied Grade 2 targets each begin with a stroke-order demonstration'
 
   assert.equal(flow.complete, true)
   assert.deepEqual(grade2Targets.map((target) => target.text), ['比如', '部分', '更', '方便', '美好'])
+})
+
+test('stroke-order validation detects a later stroke and a reversed stroke', () => {
+  const expected = [
+    [[10, 20], [45, 20], [80, 20]],
+    [[50, 10], [50, 45], [50, 80]],
+  ] as const
+
+  assert.equal(detectStrokeOrderViolation([[12, 21], [48, 20], [79, 19]], expected, 0), null)
+  assert.deepEqual(
+    detectStrokeOrderViolation([[51, 11], [50, 44], [49, 79]], expected, 0),
+    { expectedIndex: 0, matchedIndex: 1, reason: 'out-of-order' },
+  )
+  assert.deepEqual(
+    detectStrokeOrderViolation([[79, 20], [46, 20], [11, 20]], expected, 0),
+    { expectedIndex: 0, matchedIndex: 0, reason: 'reversed' },
+  )
 })
 
 test('a reviewed prompt returns an assessment for the answered prompt', () => {

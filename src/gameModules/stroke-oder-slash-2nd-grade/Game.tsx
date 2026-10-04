@@ -27,6 +27,7 @@ import { LearningGameComplete, LearningGameEmpty, LearningGameShell, SelfAssessm
 import { AutoAssessmentFeedback, type AssessmentFeedback } from './runtime/AssessmentFeedback'
 import { playGameSound } from './runtime/gameFeel'
 import { summarizeLearningGame } from './runtime/model'
+import { detectStrokeOrderViolation } from './strokeOrderValidation'
 
 type StrokePhase = 'trace' | 'write' | 'compare'
 type NarrationState = 'idle' | 'playing' | 'ready' | 'error'
@@ -95,14 +96,14 @@ function simplifyStroke(points: readonly StrokePoint[]) {
 function StrokePad({
   round,
   strokes,
-  onStrokesChange,
+  onStrokeComplete,
   showGuide,
   animationKey,
   label,
 }: {
   readonly round: StrokeOrderGameRound
   readonly strokes: InkDrawing
-  readonly onStrokesChange?: Dispatch<SetStateAction<InkDrawing>>
+  readonly onStrokeComplete?: (stroke: InkStroke) => void
   readonly showGuide: boolean
   readonly animationKey: number
   readonly label: string
@@ -112,7 +113,7 @@ function StrokePad({
   const activePath = useRef<SVGPathElement | null>(null)
   const padBounds = useRef<DOMRect | null>(null)
   const paintFrame = useRef<number | null>(null)
-  const interactive = Boolean(onStrokesChange)
+  const interactive = Boolean(onStrokeComplete)
   const characterCount = Math.max(1, [...round.targetText].length)
   const viewBoxWidth = characterCount * 100
 
@@ -130,7 +131,7 @@ function StrokePad({
   }
 
   function beginStroke(event: ReactPointerEvent<SVGSVGElement>) {
-    if (!onStrokesChange || (event.pointerType === 'mouse' && event.button !== 0)) return
+    if (!onStrokeComplete || (event.pointerType === 'mouse' && event.button !== 0)) return
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
     activePointer.current = event.pointerId
@@ -140,7 +141,7 @@ function StrokePad({
   }
 
   function continueStroke(event: ReactPointerEvent<SVGSVGElement>) {
-    if (!onStrokesChange || activePointer.current !== event.pointerId || !padBounds.current) return
+    if (!onStrokeComplete || activePointer.current !== event.pointerId || !padBounds.current) return
     event.preventDefault()
     const coalesced = typeof event.nativeEvent.getCoalescedEvents === 'function'
       ? event.nativeEvent.getCoalescedEvents()
@@ -167,7 +168,7 @@ function StrokePad({
       paintFrame.current = null
     }
     const completedStroke = simplifyStroke(activePoints.current)
-    if (completedStroke.length >= 2) onStrokesChange?.((current) => [...current, completedStroke])
+    if (completedStroke.length >= 2) onStrokeComplete?.(completedStroke)
     activePath.current?.removeAttribute('d')
     activePointer.current = null
     activePoints.current = []
@@ -318,6 +319,8 @@ export function StrokeOderSlash2ndGrade({
   const [savedDrawing, setSavedDrawing] = useState<InkDrawing>([])
   const [animationKey, setAnimationKey] = useState(0)
   const [modelAnimating, setModelAnimating] = useState(flow.prompt?.kind === 'show-copy')
+  const [orderError, setOrderError] = useState(false)
+  const [trialResetKey, setTrialResetKey] = useState(0)
   const [narrationKey, setNarrationKey] = useState(0)
   const [narrationState, setNarrationState] = useState<NarrationState>('idle')
   const [attempts, setAttempts] = useState<readonly LearningGameAttempt[]>([])
@@ -325,6 +328,7 @@ export function StrokeOderSlash2ndGrade({
   const [pendingFlow, setPendingFlow] = useState<EngineAcquisitionFlow<StrokeOrderAcquisitionTarget> | null>(null)
   const [revealMethod, setRevealMethod] = useState<AcquisitionRevealMethod>('manual_compare')
   const narrationRequestRef = useRef(0)
+  const orderErrorTimerRef = useRef<number | null>(null)
   const prompt = flow.prompt
   const round = prompt ? rounds.find((candidate) => candidate.id === prompt.word.strokeRoundId) : undefined
   const valid = validStrokeOrderRounds(rounds)
@@ -367,12 +371,17 @@ export function StrokeOderSlash2ndGrade({
     return () => { narrationRequestRef.current += 1 }
   }, [narrationKey, playCurrentNarration])
 
+  useEffect(() => () => {
+    if (orderErrorTimerRef.current !== null) window.clearTimeout(orderErrorTimerRef.current)
+  }, [])
+
   useEffect(() => {
     if (!prompt) return
     setPhase(prompt.kind === 'show-copy' ? 'trace' : 'write')
     setTraceDrawing([])
     setMemoryDrawing([])
     setSavedDrawing([])
+    setOrderError(false)
     setModelAnimating(prompt.kind === 'show-copy')
     setAnimationKey((current) => current + 1)
     setRevealMethod('manual_compare')
@@ -441,6 +450,44 @@ export function StrokeOderSlash2ndGrade({
     playGameSound('progress')
   }
 
+  function announceWrongOrder(drawing: 'trace' | 'memory') {
+    if (orderError) return
+    setOrderError(true)
+    playGameSound('incorrect')
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      const announcement = new SpeechSynthesisUtterance('Wrong order! Start again.')
+      announcement.rate = .9
+      window.speechSynthesis.speak(announcement)
+    }
+    if (orderErrorTimerRef.current !== null) window.clearTimeout(orderErrorTimerRef.current)
+    orderErrorTimerRef.current = window.setTimeout(() => {
+      if (drawing === 'trace') {
+        setTraceDrawing([])
+        setModelAnimating(true)
+        setAnimationKey((current) => current + 1)
+      } else {
+        setMemoryDrawing([])
+        setNarrationKey((current) => current + 1)
+      }
+      setTrialResetKey((current) => current + 1)
+      setOrderError(false)
+      orderErrorTimerRef.current = null
+    }, 1500)
+  }
+
+  function recordStroke(drawing: 'trace' | 'memory', stroke: InkStroke) {
+    if (!round || orderError) return
+    const current = drawing === 'trace' ? traceDrawing : memoryDrawing
+    const violation = detectStrokeOrderViolation(stroke, round.strokes, current.length)
+    if (violation) {
+      announceWrongOrder(drawing)
+      return
+    }
+    if (drawing === 'trace') setTraceDrawing([...current, stroke])
+    else setMemoryDrawing([...current, stroke])
+  }
+
   function replayModel() {
     setModelAnimating(true)
     setAnimationKey((current) => current + 1)
@@ -489,7 +536,11 @@ export function StrokeOderSlash2ndGrade({
         <span className={phase === 'compare' && !feedback ? 'is-current' : feedback ? 'is-complete' : ''}><b>2</b>{prompt.kind === 'show-copy' ? 'Review' : 'Compare'}</span>
         <span className={feedback ? 'is-current' : ''}><b>3</b>{prompt.kind === 'show-copy' ? 'Next trial' : 'Self-assess'}</span>
       </div>
-      {feedback ? <AutoAssessmentFeedback
+      {orderError ? <div className="sos2-order-error" role="alert" aria-live="assertive">
+        <span aria-hidden="true">!</span>
+        <h2>Wrong order!</h2>
+        <p>Start this trial again from stroke 1.</p>
+      </div> : feedback ? <AutoAssessmentFeedback
         feedback={feedback}
         lastRound={Boolean(pendingFlow?.complete)}
         correctTitle={correctFeedbackTitle}
@@ -501,7 +552,7 @@ export function StrokeOderSlash2ndGrade({
             ? 'Playing…'
             : narrationState === 'error' ? `Tap to hear ${round.targetText}` : 'Hear it'}</button>
         </div>
-        <StrokePad round={round} strokes={traceDrawing} onStrokesChange={setTraceDrawing} showGuide animationKey={animationKey} label={`Animated stroke order · ${traceDrawing.length}/${round.strokes.length} strokes copied`} />
+        <StrokePad round={round} strokes={traceDrawing} onStrokeComplete={(stroke) => recordStroke('trace', stroke)} showGuide animationKey={animationKey} label={`Animated stroke order · ${traceDrawing.length}/${round.strokes.length} strokes copied`} />
         <div className="sos2-stroke-actions">
           <DrawingTools drawing={traceDrawing} setDrawing={setTraceDrawing} />
           <button className="sos2-stroke-replay" type="button" onClick={replayModel}><Play size={17} /> Replay stroke order</button>
@@ -518,9 +569,9 @@ export function StrokeOderSlash2ndGrade({
       </> : phase === 'write' ? <>
         <div className="sos2-stroke-heading">
           <div><p className="sos2-kicker">{promptLabel(prompt.kind)} · guide hidden</p><h2>Listen, then write the target from memory</h2></div>
-          <span className="sos2-memory-seal"><Brush size={19} /> <PromptCountdown key={`${prompt.id}:write`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => revealHidden('timer')} /></span>
+          <span className="sos2-memory-seal"><Brush size={19} /> <PromptCountdown key={`${prompt.id}:write:${trialResetKey}`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => revealHidden('timer')} /></span>
         </div>
-        <StrokePad round={round} strokes={memoryDrawing} onStrokesChange={setMemoryDrawing} showGuide={false} animationKey={animationKey} label={`Memory writing · ${memoryDrawing.length} strokes saved`} />
+        <StrokePad round={round} strokes={memoryDrawing} onStrokeComplete={(stroke) => recordStroke('memory', stroke)} showGuide={false} animationKey={animationKey} label={`Memory writing · ${memoryDrawing.length} strokes saved`} />
         <div className="sos2-stroke-actions">
           <DrawingTools drawing={memoryDrawing} setDrawing={setMemoryDrawing} />
           <button type="button" className="sos2-stroke-replay" onClick={() => setNarrationKey((current) => current + 1)}><RotateCcw size={17} /> Hear it again</button>
