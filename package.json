@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "npm run build",
+    "test": "npm run build && node --experimental-strip-types --test tests/*.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
