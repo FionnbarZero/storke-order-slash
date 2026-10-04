@@ -16,7 +16,7 @@ import {
   type AcquisitionTargetSet,
 } from '../../acquisition'
 import { strokeOrderIntroductionSequence } from '../../strokeOrderAcquisition'
-import { secondGradeWritingTargets } from './curriculum'
+import { secondGradeInitialCopySeconds, secondGradeWritingTargets } from './curriculum'
 import type {
   StrokeOrderAcquisitionConfig,
   StrokeOrderAcquisitionTarget,
@@ -114,6 +114,10 @@ export const secondGradeAcquisitionStrategy = {
   version: 1,
   familiarDtTargets,
   introductionSequence: strokeOrderIntroductionSequence,
+  timers: {
+    ...grade2AcquisitionStrategy.timers,
+    introductionShowCopySeconds: secondGradeInitialCopySeconds,
+  },
 } as const satisfies AcquisitionStrategy<StrokeOrderAcquisitionTarget>
 
 export const secondGradeTargetSet = {

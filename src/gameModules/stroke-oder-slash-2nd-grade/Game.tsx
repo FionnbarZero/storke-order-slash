@@ -33,6 +33,14 @@ type NarrationState = 'idle' | 'playing' | 'ready' | 'error'
 type InkStroke = StrokePoint[]
 type InkDrawing = InkStroke[]
 
+const strokeAnimationStaggerSeconds = .55
+const strokeAnimationDurationSeconds = .46
+
+function modelAnimationDurationMs(strokeCount: number) {
+  if (strokeCount <= 0) return 0
+  return ((strokeCount - 1) * strokeAnimationStaggerSeconds + strokeAnimationDurationSeconds) * 1000
+}
+
 function validStrokeOrderRounds(rounds: readonly StrokeOrderGameRound[]) {
   return rounds.length > 0
     && new Set(rounds.map((round) => round.id)).size === rounds.length
@@ -186,25 +194,28 @@ function StrokePad({
           key={`${round.id}-guide-${index}`}
           d={strokePath(stroke)}
           pathLength={1}
-          style={{ animationDelay: `${index * .55}s` }}
+          style={{
+            animationDelay: `${index * strokeAnimationStaggerSeconds}s`,
+            animationDuration: `${strokeAnimationDurationSeconds}s`,
+          }}
         />)}
-        {round.strokes.map((stroke, index) => <g className="sos2-stroke-marker" key={`${round.id}-marker-${index}`} style={{ animationDelay: `${index * .55}s` }}>
+        {round.strokes.map((stroke, index) => <g className="sos2-stroke-marker" key={`${round.id}-marker-${index}`} style={{ animationDelay: `${index * strokeAnimationStaggerSeconds}s` }}>
           <circle cx={stroke[0][0]} cy={stroke[0][1]} r="4.3" />
           <text x={stroke[0][0]} y={stroke[0][1] + 1.7}>{round.strokeLabels?.[index] ?? index + 1}</text>
         </g>)}
         {round.strokes.map((stroke, index) => <circle className="sos2-stroke-brush" key={`${round.id}-brush-${index}`} r="2.7">
           <animateMotion
             path={strokePath(stroke)}
-            begin={`${index * .55}s`}
-            dur=".46s"
+            begin={`${index * strokeAnimationStaggerSeconds}s`}
+            dur={`${strokeAnimationDurationSeconds}s`}
             fill="freeze"
           />
           <animate
             attributeName="opacity"
             values="0;1;1;0"
             keyTimes="0;.08;.82;1"
-            begin={`${index * .55}s`}
-            dur=".46s"
+            begin={`${index * strokeAnimationStaggerSeconds}s`}
+            dur={`${strokeAnimationDurationSeconds}s`}
             fill="freeze"
           />
         </circle>)}
@@ -306,6 +317,7 @@ export function StrokeOderSlash2ndGrade({
   const [memoryDrawing, setMemoryDrawing] = useState<InkDrawing>([])
   const [savedDrawing, setSavedDrawing] = useState<InkDrawing>([])
   const [animationKey, setAnimationKey] = useState(0)
+  const [modelAnimating, setModelAnimating] = useState(flow.prompt?.kind === 'show-copy')
   const [narrationKey, setNarrationKey] = useState(0)
   const [narrationState, setNarrationState] = useState<NarrationState>('idle')
   const [attempts, setAttempts] = useState<readonly LearningGameAttempt[]>([])
@@ -361,9 +373,19 @@ export function StrokeOderSlash2ndGrade({
     setTraceDrawing([])
     setMemoryDrawing([])
     setSavedDrawing([])
+    setModelAnimating(prompt.kind === 'show-copy')
     setAnimationKey((current) => current + 1)
     setRevealMethod('manual_compare')
   }, [prompt?.id])
+
+  useEffect(() => {
+    if (!prompt || prompt.kind !== 'show-copy' || phase !== 'trace' || !round || !modelAnimating) return
+    const timer = window.setTimeout(
+      () => setModelAnimating(false),
+      modelAnimationDurationMs(round.strokes.length),
+    )
+    return () => window.clearTimeout(timer)
+  }, [animationKey, modelAnimating, phase, prompt?.id, round])
 
   useEffect(() => {
     if (!feedback || !pendingFlow) return
@@ -394,6 +416,7 @@ export function StrokeOderSlash2ndGrade({
       } : current)
       setTraceDrawing([])
       setSavedDrawing([])
+      setModelAnimating(true)
       setAnimationKey((current) => current + 1)
       setPhase('trace')
       return
@@ -416,6 +439,11 @@ export function StrokeOderSlash2ndGrade({
     setFlow((current) => revealAcquisition(current))
     setPhase('compare')
     playGameSound('progress')
+  }
+
+  function replayModel() {
+    setModelAnimating(true)
+    setAnimationKey((current) => current + 1)
   }
 
   function assess(correct: boolean) {
@@ -476,7 +504,7 @@ export function StrokeOderSlash2ndGrade({
         <StrokePad round={round} strokes={traceDrawing} onStrokesChange={setTraceDrawing} showGuide animationKey={animationKey} label={`Animated stroke order · ${traceDrawing.length}/${round.strokes.length} strokes copied`} />
         <div className="sos2-stroke-actions">
           <DrawingTools drawing={traceDrawing} setDrawing={setTraceDrawing} />
-          <button className="sos2-stroke-replay" type="button" onClick={() => setAnimationKey((current) => current + 1)}><Play size={17} /> Replay stroke order</button>
+          <button className="sos2-stroke-replay" type="button" onClick={replayModel}><Play size={17} /> Replay stroke order</button>
           <button className="sos2-stroke-replay" type="button" onClick={() => reviewShowCopy('skip_timer')}>Review now</button>
           <button className="sos2-primary" type="button" disabled={traceDrawing.length < round.strokes.length} onClick={() => {
             reviewShowCopy('manual_compare')
@@ -484,7 +512,9 @@ export function StrokeOderSlash2ndGrade({
             ? `Lift your finger, then draw ${remainingTraceStrokes} more ${remainingTraceStrokes === 1 ? 'stroke' : 'strokes'}`
             : 'Review my copy'}</button>
         </div>
-        <p className="sos2-round-label">Review opens in <PromptCountdown key={`${prompt.id}:copy`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => reviewShowCopy('timer')} /></p>
+        <p className="sos2-round-label">{modelAnimating
+          ? 'Model writing · timer starts after the final stroke'
+          : <>Your writing time · <PromptCountdown key={`${prompt.id}:copy:${animationKey}`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => reviewShowCopy('timer')} /></>}</p>
       </> : phase === 'write' ? <>
         <div className="sos2-stroke-heading">
           <div><p className="sos2-kicker">{promptLabel(prompt.kind)} · guide hidden</p><h2>Listen, then write the target from memory</h2></div>

@@ -13,7 +13,7 @@ import {
 import { strokeOrderIntroductionSequence } from '../src/strokeOrderAcquisition.ts'
 import { gameManifest as originalGameManifest } from '../src/gameModules/stroke-order-slay/manifest.ts'
 import { gameManifest as secondGradeGameManifest } from '../src/gameModules/stroke-oder-slash-2nd-grade/manifest.ts'
-import { secondGradeWritingTargets } from '../src/gameModules/stroke-oder-slash-2nd-grade/curriculum.ts'
+import { secondGradeInitialCopySeconds, secondGradeWritingTargets } from '../src/gameModules/stroke-oder-slash-2nd-grade/curriculum.ts'
 
 const targets: AcquisitionTarget[] = [
   {
@@ -142,6 +142,10 @@ test('the supplied Grade 2 targets each begin with a stroke-order demonstration'
     id: 'stroke-order-grade2-target-test',
     version: 1,
     introductionSequence: strokeOrderIntroductionSequence,
+    timers: {
+      ...grade2AcquisitionStrategy.timers,
+      introductionShowCopySeconds: secondGradeInitialCopySeconds,
+    },
   } as const satisfies AcquisitionStrategy
 
   let flow = startAcquisition(grade2TargetSet, strategy, () => 0)
@@ -150,6 +154,7 @@ test('the supplied Grade 2 targets each begin with a stroke-order demonstration'
     assert.equal(flow.phase, 'introduction')
     assert.equal(flow.prompt?.kind, 'show-copy')
     assert.equal(flow.prompt?.word.text, target.text)
+    assert.equal(flow.prompt?.timerSeconds, 12)
 
     while (!flow.complete && flow.targetIndex === targetIndex) {
       flow = transitionAcquisition(
