@@ -176,7 +176,7 @@ function StrokePad({
   }
 
   return <div
-    className={`sos2-stroke-pad${interactive ? ' is-interactive' : ' is-saved'}${showGuide ? ' has-guide' : ''}`}
+    className={`sos2-stroke-pad${characterCount === 1 ? ' is-single-character' : ''}${interactive ? ' is-interactive' : ' is-saved'}${showGuide ? ' has-guide' : ''}`}
     style={{ aspectRatio: `${characterCount} / 1` }}
   >
     <svg
@@ -233,7 +233,10 @@ function StrokePad({
 function ReferencePad({ round }: { readonly round: StrokeOrderGameRound }) {
   const characters = [...round.targetText]
   const viewBoxWidth = Math.max(1, characters.length) * 100
-  return <div className="sos2-stroke-pad is-reference" style={{ aspectRatio: `${characters.length} / 1` }}>
+  return <div
+    className={`sos2-stroke-pad is-reference${characters.length === 1 ? ' is-single-character' : ''}`}
+    style={{ aspectRatio: `${characters.length} / 1` }}
+  >
     <svg viewBox={`0 0 ${viewBoxWidth} 100`} role="img" aria-label={`Correct writing: ${round.targetText}`}>
       <PracticeGrid characterCount={characters.length} />
       {characters.map((character, index) => <text key={`${character}-${index}`} className="sos2-reference-character" x={50 + index * 100} y="76" textAnchor="middle">{character}</text>)}

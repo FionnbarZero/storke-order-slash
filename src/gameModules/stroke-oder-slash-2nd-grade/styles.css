@@ -190,9 +190,9 @@
   .sos2-heading { margin-top: 20px; }
   .sos2-card { border-radius: 24px; }
 }
-.sos2-shell { width: min(940px, calc(100% - 32px)); }
-.sos2-heading { margin: 18px 0 16px; }
-.sos2-heading h1 { font-family: Inter, ui-rounded, "Avenir Next", system-ui, sans-serif; font-size: clamp(2.35rem, 6vw, 4.3rem); font-weight: 950; letter-spacing: -.065em; }
+.sos2-shell { width: min(940px, calc(100% - 32px)); padding: 16px 0 18px; }
+.sos2-heading { margin: 8px 0 10px; }
+.sos2-heading h1 { font-family: Inter, ui-rounded, "Avenir Next", system-ui, sans-serif; font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 950; letter-spacing: -.065em; }
 .sos2-card { min-height: 610px; padding: clamp(23px, 4vw, 38px); border-radius: 34px; }
 .sos2-world-atmosphere { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
 .sos2-world-atmosphere i { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--sos2-accent-rgb) / 55%); box-shadow: 0 0 25px rgb(var(--sos2-accent-rgb) / 45%); }
@@ -217,15 +217,16 @@
 .sos2-read-aloud-briefing .sos2-audio { color: #f2dba7; }
 .sos2-scroll-reading-stage .sos2-kicker { color: #d9b767; }
 .sos2-speller-review > p:not(.sos2-kicker) { color: #b8bfd0; }
-.sos2-stroke-order-card { justify-content: flex-start; min-height: 760px; background: radial-gradient(circle at 50% 22%,rgb(255 97 97 / 9%),transparent 280px),linear-gradient(155deg,#21141d,#0c1020 78%); }
-.sos2-stroke-order-card .sos2-phase-steps { margin-bottom: 16px; }
+.sos2-stroke-order-card { justify-content: flex-start; min-height: 0; padding: 22px 26px 24px; background: radial-gradient(circle at 50% 22%,rgb(255 97 97 / 9%),transparent 280px),linear-gradient(155deg,#21141d,#0c1020 78%); }
+.sos2-stroke-order-card .sos2-phase-steps { margin-bottom: 10px; }
 .sos2-stroke-order-card .sos2-phase-steps .is-current { border-color: rgb(255 91 96 / 48%); color: #ffb6b7; background: rgb(255 91 96 / 11%); box-shadow: 0 0 22px rgb(255 91 96 / 9%); }
 .sos2-stroke-order-card .sos2-phase-steps .is-current b { color: white; background: #e84952; }
-.sos2-stroke-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(620px,100%); margin: 0 auto 10px; text-align: left; }
-.sos2-stroke-heading h2 { margin: 2px 0 0; font-size: clamp(1.35rem,4vw,2.05rem); }
+.sos2-stroke-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(800px,100%); margin: 0 auto 8px; text-align: left; }
+.sos2-stroke-heading h2 { margin: 2px 0 0; font-size: clamp(1.25rem,2.6vw,1.75rem); }
 .sos2-stroke-heading h2 span { color: #ff7275; font-family: "STKaiti","KaiTi","Kaiti SC",serif; font-size: 1.35em; }
 .sos2-stroke-heading .sos2-audio { flex: 0 0 auto; min-height: 42px; margin: 0; padding: 8px 13px; border-color: rgb(255 116 119 / 38%); color: #ffc6c7; background: rgb(255 89 94 / 8%); font-size: .72rem; }
 .sos2-stroke-pad { position: relative; width: min(760px,100%); margin: 0 auto; overflow: hidden; border: 3px solid #e94b50; border-radius: 18px; background: #fffaf0; box-shadow: 0 20px 48px rgb(0 0 0 / 30%),0 0 0 7px rgb(255 83 89 / 6%); isolation: isolate; }
+.sos2-stroke-pad.is-single-character { width: min(380px,100%); }
 .sos2-stroke-pad svg { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
 .sos2-stroke-pad.is-interactive svg { cursor: crosshair; touch-action: none; }
 .sos2-stroke-pad.is-interactive svg:focus { outline: 4px solid rgb(255 199 94 / 50%); outline-offset: -5px; }
@@ -237,7 +238,7 @@
 .sos2-stroke-marker text,.sos2-reference-marker text { fill: white; font: 900 4px/1 Inter,sans-serif; text-anchor: middle; }
 .sos2-student-ink path { fill: none; stroke: #12131a; stroke-width: 4.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px .4px rgb(0 0 0 / 25%)); }
 .sos2-stroke-pad-label { position: absolute; z-index: 3; right: 9px; bottom: 9px; left: 9px; padding: 7px 10px; border-radius: 9px; color: #5d272a; background: rgb(255 247 230 / 88%); box-shadow: 0 5px 15px rgb(92 39 39 / 11%); font-size: .66rem; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; pointer-events: none; backdrop-filter: blur(7px); }
-.sos2-stroke-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; width: min(690px,100%); margin: 16px auto 0; }
+.sos2-stroke-actions { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 7px; width: min(840px,100%); margin: 10px auto 0; }
 .sos2-stroke-actions .sos2-primary { min-height: 43px; margin: 0; color: #291012; background: linear-gradient(135deg,#ffdb72,#ff7c68); }
 .sos2-stroke-tools { display: flex; gap: 8px; }
 .sos2-stroke-tools button,.sos2-stroke-replay { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 8px 11px; border: 1px solid rgb(255 255 255 / 12%); border-radius: 11px; color: #bcc4d8; background: #171d31; cursor: pointer; font-size: .68rem; font-weight: 850; }
@@ -252,6 +253,7 @@
 .sos2-stroke-comparison > section > strong { color: #adb7cf; font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; }
 .sos2-stroke-comparison > span { color: #ff7578; font-size: 1.6rem; font-weight: 950; }
 .sos2-stroke-comparison .sos2-stroke-pad { width: 100%; border-width: 2px; border-radius: 13px; box-shadow: 0 11px 25px rgb(0 0 0 / 25%); }
+.sos2-stroke-comparison .sos2-stroke-pad.is-single-character { width: min(200px,100%); }
 .sos2-reference-character { fill: #e83e44; font: 78px/1 "STKaiti","KaiTi","Kaiti SC",serif; }
 .sos2-reference-marker circle { fill: #252633; }
 .sos2-stroke-review > .sos2-audio { min-height: 41px; margin: 14px auto 5px; padding: 8px 13px; border-color: rgb(255 111 115 / 30%); color: #ffc0c1; background: rgb(255 86 91 / 7%); font-size: .7rem; }
@@ -267,11 +269,11 @@
   .sos2-stroke-marker { opacity: 0; animation: sos2-stroke-marker-in .25s ease-out forwards; }
 }
 @media (max-width: 700px) {
-  .sos2-stroke-order-card { min-height: 680px; padding-right: 14px; padding-left: 14px; }
+  .sos2-stroke-order-card { min-height: 0; padding: 18px 14px 20px; }
   .sos2-stroke-heading { align-items: flex-start; }
   .sos2-stroke-heading .sos2-audio { padding: 8px 10px; }
   .sos2-stroke-pad { width: min(430px,calc(100vw - 62px)); border-radius: 13px; }
-  .sos2-stroke-actions { align-items: stretch; }
+  .sos2-stroke-actions { flex-wrap: wrap; align-items: stretch; }
   .sos2-stroke-tools { flex: 1 1 auto; }
   .sos2-stroke-tools button { flex: 1; }
   .sos2-stroke-actions .sos2-primary { flex: 1 1 100%; }
