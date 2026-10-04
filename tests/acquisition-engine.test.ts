@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
   grade2AcquisitionStrategy,
@@ -169,6 +170,15 @@ test('the supplied Grade 2 targets each begin with a stroke-order demonstration'
 
   assert.equal(flow.complete, true)
   assert.deepEqual(grade2Targets.map((target) => target.text), ['比如', '部分', '更', '方便', '美好'])
+})
+
+test('every independent writing target has a local Mandarin recording', () => {
+  const recordings = ['bi-ru.wav', 'bu-fen.wav', 'geng.wav', 'fang-bian.wav', 'mei-hao.wav']
+  for (const recording of recordings) {
+    const audio = readFileSync(new URL(`../public/audio/mandarin/${recording}`, import.meta.url))
+    assert.equal(audio.subarray(0, 4).toString(), 'RIFF')
+    assert.ok(audio.length > 40_000, `${recording} should contain audible PCM data`)
+  }
 })
 
 test('a reviewed prompt returns an assessment for the answered prompt', () => {

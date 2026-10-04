@@ -91,6 +91,11 @@ const recordings: Readonly<Record<string, string>> = {
   '二': `${import.meta.env.BASE_URL}audio/mandarin/two.wav`,
   '三': `${import.meta.env.BASE_URL}audio/mandarin/three.wav`,
   '人': `${import.meta.env.BASE_URL}audio/mandarin/person.wav`,
+  '比如': `${import.meta.env.BASE_URL}audio/mandarin/bi-ru.wav`,
+  '部分': `${import.meta.env.BASE_URL}audio/mandarin/bu-fen.wav`,
+  '更': `${import.meta.env.BASE_URL}audio/mandarin/geng.wav`,
+  '方便': `${import.meta.env.BASE_URL}audio/mandarin/fang-bian.wav`,
+  '美好': `${import.meta.env.BASE_URL}audio/mandarin/mei-hao.wav`,
 }
 
 export function App() {
