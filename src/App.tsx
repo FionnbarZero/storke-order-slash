@@ -6,11 +6,17 @@ import {
   type AcquisitionTargetSet,
 } from './acquisition'
 import StrokeOrderSlay, {
-  type LearningGameSummary,
   type StrokeOrderAcquisitionTarget,
   type StrokeOrderGameRound,
 } from './gameModules/stroke-order-slay'
+import StrokeOderSlash2ndGrade, {
+  secondGradeAcquisitionConfig,
+  secondGradeRounds,
+} from './gameModules/stroke-oder-slash-2nd-grade'
 import { strokeOrderIntroductionSequence } from './strokeOrderAcquisition'
+
+type DemoGame = 'original' | 'second-grade'
+type DemoSummary = { readonly attempted: number; readonly correct: number }
 
 const rounds: readonly StrokeOrderGameRound[] = [
   {
@@ -89,8 +95,9 @@ export function App() {
   const activeAudio = useRef<HTMLAudioElement | null>(null)
   const settleActiveAudio = useRef<(() => void) | null>(null)
   const [session, setSession] = useState(0)
+  const [game, setGame] = useState<DemoGame>('second-grade')
   const [playing, setPlaying] = useState(false)
-  const [summary, setSummary] = useState<LearningGameSummary | null>(null)
+  const [summary, setSummary] = useState<DemoSummary | null>(null)
 
   function stopAudio() {
     const audio = activeAudio.current
@@ -99,6 +106,7 @@ export function App() {
     settleActiveAudio.current = null
     settle?.()
     audio?.pause()
+    window.speechSynthesis?.cancel()
   }
 
   useEffect(() => () => stopAudio(), [])
@@ -106,7 +114,17 @@ export function App() {
   function playAudio(text: string, _language = 'zh-CN', playbackRate = 1) {
     stopAudio()
     const url = recordings[text]
-    if (!url) return Promise.reject(new Error(`No recording for ${text}`))
+    if (!url) {
+      if (!('speechSynthesis' in window)) return Promise.reject(new Error(`No recording for ${text}`))
+      return new Promise<void>((resolve, reject) => {
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = 'zh-CN'
+        utterance.rate = playbackRate
+        utterance.onend = () => resolve()
+        utterance.onerror = () => reject(new Error(`Could not speak ${text}`))
+        window.speechSynthesis.speak(utterance)
+      })
+    }
 
     return new Promise<void>((resolve, reject) => {
       const audio = new Audio(url)
@@ -138,13 +156,26 @@ export function App() {
     setPlaying(false)
   }
 
-  function startGame() {
+  function startGame(nextGame: DemoGame) {
     setSummary(null)
+    setGame(nextGame)
     setSession((current) => current + 1)
     setPlaying(true)
   }
 
   if (playing) {
+    if (game === 'second-grade') return <StrokeOderSlash2ndGrade
+      key={session}
+      rounds={secondGradeRounds}
+      acquisition={secondGradeAcquisitionConfig}
+      playAudio={playAudio}
+      onExit={returnHome}
+      onComplete={(result) => {
+        setSummary(result)
+        returnHome()
+      }}
+    />
+
     return <StrokeOrderSlay
       key={session}
       rounds={rounds}
@@ -165,14 +196,19 @@ export function App() {
     <section className="standalone-card">
       <p className="standalone-kicker">Touch-writing ninja training</p>
       <h1>Stroke-order Slay</h1>
-      <p>Learn 人 through Acquisition using 一, 二, and 三 as Familiar DTs. Timers, Expanded Trials, and Correction are controlled by the extracted engine.</p>
+      <p>Test the second-grade Acquisition sequence with 比如, 部分, 更, 方便, and 美好, or open the original single-character demo.</p>
       {summary && <div className="standalone-summary" role="status">
         <strong>{summary.correct}/{summary.attempted} mastered</strong>
         <span>Your latest training run is complete.</span>
       </div>}
-      <button type="button" onClick={startGame}>
-        {summary ? <><RotateCcw size={19} /> Train again</> : <>Begin training <ArrowRight size={19} /></>}
-      </button>
+      <div className="standalone-actions">
+        <button type="button" onClick={() => startGame('second-grade')}>
+          {summary && game === 'second-grade' ? <><RotateCcw size={19} /> Test again</> : <>Test 2nd grade sequence <ArrowRight size={19} /></>}
+        </button>
+        <button className="is-secondary" type="button" onClick={() => startGame('original')}>
+          Original 人 demo
+        </button>
+      </div>
     </section>
   </main>
 }

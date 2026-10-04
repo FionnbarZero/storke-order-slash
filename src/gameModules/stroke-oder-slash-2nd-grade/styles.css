@@ -225,7 +225,7 @@
 .sos2-stroke-heading h2 { margin: 2px 0 0; font-size: clamp(1.35rem,4vw,2.05rem); }
 .sos2-stroke-heading h2 span { color: #ff7275; font-family: "STKaiti","KaiTi","Kaiti SC",serif; font-size: 1.35em; }
 .sos2-stroke-heading .sos2-audio { flex: 0 0 auto; min-height: 42px; margin: 0; padding: 8px 13px; border-color: rgb(255 116 119 / 38%); color: #ffc6c7; background: rgb(255 89 94 / 8%); font-size: .72rem; }
-.sos2-stroke-pad { position: relative; width: min(470px,100%); aspect-ratio: 1; margin: 0 auto; overflow: hidden; border: 3px solid #e94b50; border-radius: 18px; background: #fffaf0; box-shadow: 0 20px 48px rgb(0 0 0 / 30%),0 0 0 7px rgb(255 83 89 / 6%); isolation: isolate; }
+.sos2-stroke-pad { position: relative; width: min(760px,100%); margin: 0 auto; overflow: hidden; border: 3px solid #e94b50; border-radius: 18px; background: #fffaf0; box-shadow: 0 20px 48px rgb(0 0 0 / 30%),0 0 0 7px rgb(255 83 89 / 6%); isolation: isolate; }
 .sos2-stroke-pad svg { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
 .sos2-stroke-pad.is-interactive svg { cursor: crosshair; touch-action: none; }
 .sos2-stroke-pad.is-interactive svg:focus { outline: 4px solid rgb(255 199 94 / 50%); outline-offset: -5px; }
@@ -259,7 +259,7 @@
 .sos2-stroke-review > .sos2-review-wait { color: #ffe19a !important; font-size: .72rem; font-weight: 850; letter-spacing: .04em; }
 .sos2-stroke-review .sos2-self-assessment { margin-top: 13px; }
 @media (prefers-reduced-motion: no-preference) {
-  .sos2-stroke-guide path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sos2-stroke-reveal .82s ease-out forwards; }
+  .sos2-stroke-guide path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sos2-stroke-reveal .46s ease-out forwards; }
   .sos2-stroke-marker { opacity: 0; animation: sos2-stroke-marker-in .25s ease-out forwards; }
 }
 @media (max-width: 700px) {

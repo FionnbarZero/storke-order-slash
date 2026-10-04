@@ -83,6 +83,19 @@ input {
   box-shadow: 0 12px 28px rgba(255, 207, 90, .25);
 }
 
+.standalone-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.standalone-card button.is-secondary {
+  border: 1px solid rgba(255, 255, 255, .18);
+  color: #dce2fa;
+  background: rgba(255, 255, 255, .07);
+}
+
 .standalone-summary {
   display: grid;
   gap: 4px;

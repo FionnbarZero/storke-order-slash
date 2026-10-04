@@ -13,6 +13,7 @@ import {
 import { strokeOrderIntroductionSequence } from '../src/strokeOrderAcquisition.ts'
 import { gameManifest as originalGameManifest } from '../src/gameModules/stroke-order-slay/manifest.ts'
 import { gameManifest as secondGradeGameManifest } from '../src/gameModules/stroke-oder-slash-2nd-grade/manifest.ts'
+import { secondGradeWritingTargets } from '../src/gameModules/stroke-oder-slash-2nd-grade/curriculum.ts'
 
 const targets: AcquisitionTarget[] = [
   {
@@ -120,6 +121,49 @@ test('the second-grade copy is registered as a distinct game module', () => {
   assert.equal(secondGradeGameManifest.id, 'stroke-oder-slash-2nd-grade')
   assert.equal(secondGradeGameManifest.title, 'Stroke Oder Slash 2nd grade')
   assert.notEqual(secondGradeGameManifest.id, originalGameManifest.id)
+})
+
+test('the supplied Grade 2 targets each begin with a stroke-order demonstration', () => {
+  const grade2Targets: AcquisitionTarget[] = secondGradeWritingTargets.map((target) => ({
+    id: `grade2-${target.id}`,
+    text: target.text,
+    sentence: '',
+    datasetId: 'grade2-week-0921-test',
+    language: 'mandarin',
+    tier: 'tier-1',
+    activityType: 'dictation',
+  }))
+  const grade2TargetSet: AcquisitionTargetSet = {
+    id: 'grade2-week-0921-test',
+    targets: grade2Targets,
+  }
+  const strategy = {
+    ...grade2AcquisitionStrategy,
+    id: 'stroke-order-grade2-target-test',
+    version: 1,
+    introductionSequence: strokeOrderIntroductionSequence,
+  } as const satisfies AcquisitionStrategy
+
+  let flow = startAcquisition(grade2TargetSet, strategy, () => 0)
+  for (const [targetIndex, target] of grade2Targets.entries()) {
+    assert.equal(flow.targetIndex, targetIndex)
+    assert.equal(flow.phase, 'introduction')
+    assert.equal(flow.prompt?.kind, 'show-copy')
+    assert.equal(flow.prompt?.word.text, target.text)
+
+    while (!flow.complete && flow.targetIndex === targetIndex) {
+      flow = transitionAcquisition(
+        revealAcquisition(flow),
+        grade2TargetSet,
+        strategy,
+        { correct: true, revealMethod: 'test' },
+        () => 0,
+      ).nextFlow
+    }
+  }
+
+  assert.equal(flow.complete, true)
+  assert.deepEqual(grade2Targets.map((target) => target.text), ['比如', '部分', '更', '方便', '美好'])
 })
 
 test('a reviewed prompt returns an assessment for the answered prompt', () => {

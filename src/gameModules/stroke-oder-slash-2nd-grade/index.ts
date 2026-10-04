@@ -1,5 +1,12 @@
 export { StrokeOderSlash2ndGrade, StrokeOderSlash2ndGrade as default } from './Game'
 export { gameManifest } from './manifest'
+export { secondGradeWritingTargets } from './curriculum'
+export {
+  secondGradeAcquisitionConfig,
+  secondGradeAcquisitionStrategy,
+  secondGradeRounds,
+  secondGradeTargetSet,
+} from './demoConfig'
 export type {
   LearningGameAttempt,
   LearningGameBaseProps,

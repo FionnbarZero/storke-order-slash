@@ -34,6 +34,8 @@ export type StrokePoint = readonly [x: number, y: number]
 export type StrokeOrderGameRound = GamePrompt & {
   readonly meaning: string
   readonly strokes: readonly (readonly StrokePoint[])[]
+  /** Display number for each flattened stroke; resets to 1 for each character in a word. */
+  readonly strokeLabels?: readonly number[]
 }
 
 export type StrokeOrderAcquisitionTarget = AcquisitionTarget & {

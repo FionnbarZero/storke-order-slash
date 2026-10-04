@@ -51,15 +51,17 @@ function serializeStroke(stroke: readonly StrokePoint[]) {
   return stroke.map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join(' ')
 }
 
-function PracticeGrid() {
+function PracticeGrid({ characterCount }: { readonly characterCount: number }) {
   return <g className="sos2-stroke-grid-lines" aria-hidden="true">
-    <rect x="3" y="3" width="94" height="94" rx="2" />
-    <path d="M50 3v94M3 50h94M3 3l94 94M97 3 3 97" />
+    {Array.from({ length: characterCount }, (_, index) => <g key={index} transform={`translate(${index * 100} 0)`}>
+      <rect x="3" y="3" width="94" height="94" rx="2" />
+      <path d="M50 3v94M3 50h94M3 3l94 94M97 3 3 97" />
+    </g>)}
   </g>
 }
 
-function pointFromClient(clientX: number, clientY: number, bounds: DOMRect): StrokePoint {
-  const x = Math.max(0, Math.min(100, ((clientX - bounds.left) / bounds.width) * 100))
+function pointFromClient(clientX: number, clientY: number, bounds: DOMRect, viewBoxWidth: number): StrokePoint {
+  const x = Math.max(0, Math.min(viewBoxWidth, ((clientX - bounds.left) / bounds.width) * viewBoxWidth))
   const y = Math.max(0, Math.min(100, ((clientY - bounds.top) / bounds.height) * 100))
   return [x, y]
 }
@@ -103,6 +105,8 @@ function StrokePad({
   const padBounds = useRef<DOMRect | null>(null)
   const paintFrame = useRef<number | null>(null)
   const interactive = Boolean(onStrokesChange)
+  const characterCount = Math.max(1, [...round.targetText].length)
+  const viewBoxWidth = characterCount * 100
 
   useEffect(() => () => {
     if (paintFrame.current !== null) window.cancelAnimationFrame(paintFrame.current)
@@ -123,7 +127,7 @@ function StrokePad({
     event.currentTarget.setPointerCapture(event.pointerId)
     activePointer.current = event.pointerId
     padBounds.current = event.currentTarget.getBoundingClientRect()
-    activePoints.current = [pointFromClient(event.clientX, event.clientY, padBounds.current)]
+    activePoints.current = [pointFromClient(event.clientX, event.clientY, padBounds.current, viewBoxWidth)]
     scheduleActivePaint()
   }
 
@@ -136,7 +140,7 @@ function StrokePad({
     const samples = coalesced.length > 0 ? coalesced : [event.nativeEvent]
     samples.forEach((sample) => appendDistinctPoint(
       activePoints.current,
-      pointFromClient(sample.clientX, sample.clientY, padBounds.current!),
+      pointFromClient(sample.clientX, sample.clientY, padBounds.current!, viewBoxWidth),
     ))
     scheduleActivePaint()
   }
@@ -146,7 +150,7 @@ function StrokePad({
     if (event.type === 'pointerup' && padBounds.current) {
       appendDistinctPoint(
         activePoints.current,
-        pointFromClient(event.clientX, event.clientY, padBounds.current),
+        pointFromClient(event.clientX, event.clientY, padBounds.current, viewBoxWidth),
       )
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
@@ -162,9 +166,12 @@ function StrokePad({
     padBounds.current = null
   }
 
-  return <div className={`sos2-stroke-pad${interactive ? ' is-interactive' : ' is-saved'}${showGuide ? ' has-guide' : ''}`}>
+  return <div
+    className={`sos2-stroke-pad${interactive ? ' is-interactive' : ' is-saved'}${showGuide ? ' has-guide' : ''}`}
+    style={{ aspectRatio: `${characterCount} / 1` }}
+  >
     <svg
-      viewBox="0 0 100 100"
+      viewBox={`0 0 ${viewBoxWidth} 100`}
       role={interactive ? 'application' : 'img'}
       aria-label={label}
       tabIndex={interactive ? 0 : undefined}
@@ -173,31 +180,31 @@ function StrokePad({
       onPointerUp={endStroke}
       onPointerCancel={endStroke}
     >
-      <PracticeGrid />
+      <PracticeGrid characterCount={characterCount} />
       {showGuide && <g className="sos2-stroke-guide" key={`${round.id}-${animationKey}`} aria-hidden="true">
         {round.strokes.map((stroke, index) => <path
           key={`${round.id}-guide-${index}`}
           d={strokePath(stroke)}
           pathLength={1}
-          style={{ animationDelay: `${index * .95}s` }}
+          style={{ animationDelay: `${index * .55}s` }}
         />)}
-        {round.strokes.map((stroke, index) => <g className="sos2-stroke-marker" key={`${round.id}-marker-${index}`} style={{ animationDelay: `${index * .95}s` }}>
+        {round.strokes.map((stroke, index) => <g className="sos2-stroke-marker" key={`${round.id}-marker-${index}`} style={{ animationDelay: `${index * .55}s` }}>
           <circle cx={stroke[0][0]} cy={stroke[0][1]} r="4.3" />
-          <text x={stroke[0][0]} y={stroke[0][1] + 1.7}>{index + 1}</text>
+          <text x={stroke[0][0]} y={stroke[0][1] + 1.7}>{round.strokeLabels?.[index] ?? index + 1}</text>
         </g>)}
         {round.strokes.map((stroke, index) => <circle className="sos2-stroke-brush" key={`${round.id}-brush-${index}`} r="2.7">
           <animateMotion
             path={strokePath(stroke)}
-            begin={`${index * .95}s`}
-            dur=".82s"
+            begin={`${index * .55}s`}
+            dur=".46s"
             fill="freeze"
           />
           <animate
             attributeName="opacity"
             values="0;1;1;0"
             keyTimes="0;.08;.82;1"
-            begin={`${index * .95}s`}
-            dur=".82s"
+            begin={`${index * .55}s`}
+            dur=".46s"
             fill="freeze"
           />
         </circle>)}
@@ -212,16 +219,18 @@ function StrokePad({
 }
 
 function ReferencePad({ round }: { readonly round: StrokeOrderGameRound }) {
-  return <div className="sos2-stroke-pad is-reference">
-    <svg viewBox="0 0 100 100" role="img" aria-label={`Correct character: ${round.targetText}`}>
-      <PracticeGrid />
-      <text className="sos2-reference-character" x="50" y="76" textAnchor="middle">{round.targetText}</text>
+  const characters = [...round.targetText]
+  const viewBoxWidth = Math.max(1, characters.length) * 100
+  return <div className="sos2-stroke-pad is-reference" style={{ aspectRatio: `${characters.length} / 1` }}>
+    <svg viewBox={`0 0 ${viewBoxWidth} 100`} role="img" aria-label={`Correct writing: ${round.targetText}`}>
+      <PracticeGrid characterCount={characters.length} />
+      {characters.map((character, index) => <text key={`${character}-${index}`} className="sos2-reference-character" x={50 + index * 100} y="76" textAnchor="middle">{character}</text>)}
       {round.strokes.map((stroke, index) => <g className="sos2-reference-marker" key={`${round.id}-reference-${index}`}>
         <circle cx={stroke[0][0]} cy={stroke[0][1]} r="4.3" />
-        <text x={stroke[0][0]} y={stroke[0][1] + 1.7}>{index + 1}</text>
+        <text x={stroke[0][0]} y={stroke[0][1] + 1.7}>{round.strokeLabels?.[index] ?? index + 1}</text>
       </g>)}
     </svg>
-    <span className="sos2-stroke-pad-label">Correct character · {round.meaning}</span>
+    <span className="sos2-stroke-pad-label">Correct writing · {round.meaning}</span>
   </div>
 }
 
@@ -324,7 +333,7 @@ export function StrokeOderSlash2ndGrade({
         ? 'Earned DT retained.'
         : 'Correct — keep going.'
   const correctFeedbackDetail = targetCompleted
-    ? 'This character is now available as an Earned DT.'
+    ? 'This target is now available as an Earned DT.'
     : 'The engine selected the next Acquisition presentation.'
 
   const playCurrentNarration = useCallback(() => {
@@ -478,7 +487,7 @@ export function StrokeOderSlash2ndGrade({
         <p className="sos2-round-label">Review opens in <PromptCountdown key={`${prompt.id}:copy`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => reviewShowCopy('timer')} /></p>
       </> : phase === 'write' ? <>
         <div className="sos2-stroke-heading">
-          <div><p className="sos2-kicker">{promptLabel(prompt.kind)} · guide hidden</p><h2>Listen, then write the character from memory</h2></div>
+          <div><p className="sos2-kicker">{promptLabel(prompt.kind)} · guide hidden</p><h2>Listen, then write the target from memory</h2></div>
           <span className="sos2-memory-seal"><Brush size={19} /> <PromptCountdown key={`${prompt.id}:write`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => revealHidden('timer')} /></span>
         </div>
         <StrokePad round={round} strokes={memoryDrawing} onStrokesChange={setMemoryDrawing} showGuide={false} animationKey={animationKey} label={`Memory writing · ${memoryDrawing.length} strokes saved`} />
@@ -492,16 +501,16 @@ export function StrokeOderSlash2ndGrade({
         </div>
       </> : <div className="sos2-stroke-review">
         <p className="sos2-kicker">Your response is saved</p>
-        <h2>{prompt.kind === 'show-copy' ? 'Review your copy before continuing' : 'Compare your writing with the real character'}</h2>
+        <h2>{prompt.kind === 'show-copy' ? 'Review your copy before continuing' : 'Compare your writing with the target'}</h2>
         <div className="sos2-stroke-comparison">
           <section><strong>Your writing</strong><StrokePad round={round} strokes={savedDrawing} showGuide={false} animationKey={animationKey} label={`${savedDrawing.length} saved strokes`} /></section>
           <span aria-hidden="true">→</span>
-          <section className="is-target"><strong>Correct character</strong><ReferencePad round={round} /></section>
+          <section className="is-target"><strong>Correct target</strong><ReferencePad round={round} /></section>
         </div>
         <button className="sos2-audio" type="button" onClick={playCurrentNarration}><Volume2 size={18} /> {narrationState === 'playing'
           ? 'Playing…'
           : narrationState === 'error' ? `Tap to hear ${round.targetText}` : `Hear ${round.targetText}`}</button>
-        <p>Does your character match the shape and stroke order?</p>
+        <p>Does your writing match the shapes and stroke order?</p>
         <p className="sos2-review-wait">This screen waits for the student’s answer.</p>
         <SelfAssessmentButtons
           incorrectLabel="Needs correction"
