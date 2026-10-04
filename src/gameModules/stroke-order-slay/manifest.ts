@@ -1,0 +1,1 @@
+export const gameManifest = { id: 'copy-hide-write-combo', title: 'Stroke-order Slay', description: 'Follow the animated stroke order, trace the character by touch, then hide it, write it, and compare.', activityLabel: 'Trace and write', channels: ['tier-1-writing'], skills: ['writing'], inputKind: 'production', estimatedSeconds: [120, 240] } as const
