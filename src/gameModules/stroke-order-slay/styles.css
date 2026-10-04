@@ -232,6 +232,7 @@
 .lg-stroke-grid-lines { fill: none; stroke: #ef6b6c; stroke-width: .75; }
 .lg-stroke-grid-lines > path { opacity: .52; stroke-dasharray: 3 2.8; stroke-width: .48; }
 .lg-stroke-guide path { fill: none; stroke: #f13f43; stroke-width: 6.5; stroke-linecap: round; stroke-linejoin: round; opacity: .3; }
+.lg-stroke-brush { fill: #ffdf7a; opacity: 0; filter: drop-shadow(0 0 3px #f13f43) drop-shadow(0 0 5px #ffdf7a); }
 .lg-stroke-marker circle,.lg-reference-marker circle { fill: #f13f43; stroke: white; stroke-width: .8; }
 .lg-stroke-marker text,.lg-reference-marker text { fill: white; font: 900 4px/1 Inter,sans-serif; text-anchor: middle; }
 .lg-student-ink path { fill: none; stroke: #12131a; stroke-width: 4.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px .4px rgb(0 0 0 / 25%)); }
@@ -257,7 +258,7 @@
 .lg-stroke-review > p:not(.lg-kicker) { margin: 8px 0 0; color: #aeb7ca !important; }
 .lg-stroke-review .lg-self-assessment { margin-top: 13px; }
 @media (prefers-reduced-motion: no-preference) {
-  .lg-stroke-guide path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: lg-stroke-reveal .68s ease-out forwards; }
+  .lg-stroke-guide path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: lg-stroke-reveal .82s ease-out forwards; }
   .lg-stroke-marker { opacity: 0; animation: lg-stroke-marker-in .25s ease-out forwards; }
 }
 @media (max-width: 700px) {
@@ -303,7 +304,7 @@
 @keyframes lg-card-enter { from { opacity: 0; transform: translateY(12px) scale(.985); } }
 @keyframes lg-victory-pulse { to { transform: translateY(-5px) rotate(9deg) scale(1.04); } }
 @keyframes art-atmosphere { to { transform: translate(25px, 18px) scale(1.1); } }
-@keyframes lg-stroke-reveal { to { stroke-dashoffset: 0; } }
+@keyframes lg-stroke-reveal { 0% { stroke-dashoffset: 1; opacity: .95; } 82% { opacity: .95; } 100% { stroke-dashoffset: 0; opacity: .3; } }
 @keyframes lg-stroke-marker-in { to { opacity: 1; } }
 @keyframes play-emblem { from { opacity: 0; transform: scale(.35) rotate(-35deg); } 58% { transform: scale(1.13) rotate(8deg); } }
 @keyframes play-energy { 60% { opacity: 1; transform: rotate(var(--energy-angle)) translateY(-142px); } to { opacity: 0; transform: rotate(var(--energy-angle)) translateY(-158px) scale(.5); } }

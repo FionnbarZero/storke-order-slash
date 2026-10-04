@@ -179,12 +179,28 @@ function StrokePad({
           key={`${round.id}-guide-${index}`}
           d={strokePath(stroke)}
           pathLength={1}
-          style={{ animationDelay: `${index * .7}s` }}
+          style={{ animationDelay: `${index * .95}s` }}
         />)}
-        {round.strokes.map((stroke, index) => <g className="lg-stroke-marker" key={`${round.id}-marker-${index}`} style={{ animationDelay: `${index * .7}s` }}>
+        {round.strokes.map((stroke, index) => <g className="lg-stroke-marker" key={`${round.id}-marker-${index}`} style={{ animationDelay: `${index * .95}s` }}>
           <circle cx={stroke[0][0]} cy={stroke[0][1]} r="4.3" />
           <text x={stroke[0][0]} y={stroke[0][1] + 1.7}>{index + 1}</text>
         </g>)}
+        {round.strokes.map((stroke, index) => <circle className="lg-stroke-brush" key={`${round.id}-brush-${index}`} r="2.7">
+          <animateMotion
+            path={strokePath(stroke)}
+            begin={`${index * .95}s`}
+            dur=".82s"
+            fill="freeze"
+          />
+          <animate
+            attributeName="opacity"
+            values="0;1;1;0"
+            keyTimes="0;.08;.82;1"
+            begin={`${index * .95}s`}
+            dur=".82s"
+            fill="freeze"
+          />
+        </circle>)}
       </g>}
       <g className="lg-student-ink">
         {strokes.map((stroke, index) => <path key={`ink-${index}`} d={strokePath(stroke)} />)}
@@ -411,7 +427,7 @@ export function StrokeOrderSlay({
     /> : round && prompt ? <section className="lg-card lg-production-card lg-stroke-order-card">
       <p className="lg-round-label">{phaseLabel(flow.phase)} · {promptLabel(prompt.kind)} · {prompt.timerSeconds}s</p>
       <div className="lg-phase-steps" aria-label={`Current presentation: ${promptLabel(prompt.kind)}`}>
-        <span className={phase === 'trace' || phase === 'write' ? 'is-current' : 'is-complete'}><b>1</b>{prompt.kind === 'show-copy' ? 'Copy with guide' : 'Write from memory'}</span>
+        <span className={phase === 'trace' || phase === 'write' ? 'is-current' : 'is-complete'}><b>1</b>{prompt.kind === 'show-copy' ? 'Watch & copy' : 'Write from memory'}</span>
         <span className={phase === 'compare' && !feedback ? 'is-current' : feedback ? 'is-complete' : ''}><b>2</b>{prompt.kind === 'show-copy' ? 'Continue' : 'Compare'}</span>
         <span className={feedback ? 'is-current' : ''}><b>3</b>{prompt.kind === 'show-copy' ? 'Next trial' : 'Self-assess'}</span>
       </div>
@@ -422,12 +438,12 @@ export function StrokeOrderSlay({
         correctDetail={correctFeedbackDetail}
       /> : prompt.kind === 'show-copy' ? <>
         <div className="lg-stroke-heading">
-          <div><p className="lg-kicker">Show & copy · {traceDrawing.length}/{round.strokes.length} strokes</p><h2>Trace <span lang="zh-Hans">{round.targetText}</span> over the numbered guide</h2></div>
+          <div><p className="lg-kicker">Stroke-order demonstration · {traceDrawing.length}/{round.strokes.length} strokes copied</p><h2>Watch <span lang="zh-Hans">{round.targetText}</span> draw itself, then copy it</h2></div>
           <button className="lg-audio" type="button" onClick={playCurrentNarration}><Volume2 size={18} /> {narrationState === 'playing'
             ? 'Playing…'
             : narrationState === 'error' ? `Tap to hear ${round.targetText}` : 'Hear it'}</button>
         </div>
-        <StrokePad round={round} strokes={traceDrawing} onStrokesChange={setTraceDrawing} showGuide animationKey={animationKey} label={`Trace the guide · ${traceDrawing.length}/${round.strokes.length} strokes`} />
+        <StrokePad round={round} strokes={traceDrawing} onStrokesChange={setTraceDrawing} showGuide animationKey={animationKey} label={`Animated stroke order · ${traceDrawing.length}/${round.strokes.length} strokes copied`} />
         <div className="lg-stroke-actions">
           <DrawingTools drawing={traceDrawing} setDrawing={setTraceDrawing} />
           <button className="lg-stroke-replay" type="button" onClick={() => setAnimationKey((current) => current + 1)}><Play size={17} /> Replay stroke order</button>

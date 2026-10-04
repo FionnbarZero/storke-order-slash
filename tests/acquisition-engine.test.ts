@@ -10,6 +10,7 @@ import {
   type AcquisitionTargetSet,
   type EngineAcquisitionFlow,
 } from '../src/acquisition/index.ts'
+import { strokeOrderIntroductionSequence } from '../src/strokeOrderAcquisition.ts'
 
 const targets: AcquisitionTarget[] = [
   {
@@ -89,6 +90,28 @@ test('the extracted Grade 2 v4 strategy preserves the complete first-target prom
   ])
   assert.equal(flow.targetIndex, 1)
   assert.deepEqual(flow.earnedDtPool.map((target) => target.id), ['stroke-target-one'])
+})
+
+test('stroke-order Acquisition demonstrates every new character first', () => {
+  const strategy = {
+    ...grade2AcquisitionStrategy,
+    id: 'stroke-order-test-v2',
+    version: 2,
+    introductionSequence: strokeOrderIntroductionSequence,
+  } as const satisfies AcquisitionStrategy
+
+  let flow = startAcquisition(targetSet, strategy, () => 0)
+  assert.equal(flow.targetIndex, 0)
+  assert.equal(flow.phase, 'introduction')
+  assert.equal(flow.prompt?.kind, 'show-copy')
+  assert.equal(flow.prompt?.word.id, targets[0].id)
+
+  while (flow.targetIndex === 0 && !flow.complete) flow = advance(flow, strategy)
+
+  assert.equal(flow.targetIndex, 1)
+  assert.equal(flow.phase, 'introduction')
+  assert.equal(flow.prompt?.kind, 'show-copy')
+  assert.equal(flow.prompt?.word.id, targets[1].id)
 })
 
 test('a reviewed prompt returns an assessment for the answered prompt', () => {

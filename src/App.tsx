@@ -10,6 +10,7 @@ import StrokeOrderSlay, {
   type StrokeOrderAcquisitionTarget,
   type StrokeOrderGameRound,
 } from './gameModules/stroke-order-slay'
+import { strokeOrderIntroductionSequence } from './strokeOrderAcquisition'
 
 const rounds: readonly StrokeOrderGameRound[] = [
   {
@@ -66,9 +67,10 @@ const acquisitionTargets = [
 
 const strokeAcquisitionStrategy = {
   ...grade2AcquisitionStrategy,
-  id: 'stroke-order-acquisition-v1',
-  version: 1,
+  id: 'stroke-order-acquisition-v2',
+  version: 2,
   familiarDtTargets,
+  introductionSequence: strokeOrderIntroductionSequence,
 } as const satisfies AcquisitionStrategy<StrokeOrderAcquisitionTarget>
 
 const strokeAcquisitionTargetSet = {
