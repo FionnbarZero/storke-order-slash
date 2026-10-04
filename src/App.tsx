@@ -103,7 +103,7 @@ export function App() {
   const settleActiveAudio = useRef<(() => void) | null>(null)
   const [session, setSession] = useState(0)
   const [game, setGame] = useState<DemoGame>('second-grade')
-  const [playing, setPlaying] = useState(() => window.location.pathname === secondGradePath)
+  const [playing, setPlaying] = useState(() => window.location.pathname.endsWith(secondGradePath))
   const [summary, setSummary] = useState<DemoSummary | null>(null)
 
   function stopAudio() {
