@@ -256,6 +256,7 @@
 .lg-reference-marker circle { fill: #252633; }
 .lg-stroke-review > .lg-audio { min-height: 41px; margin: 14px auto 5px; padding: 8px 13px; border-color: rgb(255 111 115 / 30%); color: #ffc0c1; background: rgb(255 86 91 / 7%); font-size: .7rem; }
 .lg-stroke-review > p:not(.lg-kicker) { margin: 8px 0 0; color: #aeb7ca !important; }
+.lg-stroke-review > .lg-review-wait { color: #ffe19a !important; font-size: .72rem; font-weight: 850; letter-spacing: .04em; }
 .lg-stroke-review .lg-self-assessment { margin-top: 13px; }
 @media (prefers-reduced-motion: no-preference) {
   .lg-stroke-guide path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: lg-stroke-reveal .82s ease-out forwards; }

@@ -366,16 +366,37 @@ export function StrokeOrderSlay({
     return () => window.clearTimeout(timer)
   }, [feedback, pendingFlow])
 
-  function completeShowCopy(method: AcquisitionRevealMethod) {
+  function reviewShowCopy(method: AcquisitionRevealMethod) {
     if (!prompt || prompt.kind !== 'show-copy' || feedback) return
+    setSavedDrawing(traceDrawing.map((stroke) => [...stroke]))
+    setRevealMethod(method)
+    setFlow((current) => revealAcquisition(current))
+    setPhase('compare')
+    playGameSound('progress')
+  }
+
+  function assessShowCopy(correct: boolean) {
+    if (!prompt || prompt.kind !== 'show-copy' || feedback || phase !== 'compare') return
+    if (!correct) {
+      playGameSound('incorrect')
+      setFlow((current) => current.prompt ? {
+        ...current,
+        prompt: { ...current.prompt, revealed: false },
+      } : current)
+      setTraceDrawing([])
+      setSavedDrawing([])
+      setAnimationKey((current) => current + 1)
+      setPhase('trace')
+      return
+    }
     const transition = transitionAcquisition(
-      revealAcquisition(flow),
+      flow,
       acquisition.targetSet,
       acquisition.strategy,
-      { correct: true, revealMethod: method },
+      { correct: true, revealMethod },
       Math.random,
     )
-    playGameSound('progress')
+    playGameSound('correct')
     setFlow(transition.nextFlow)
   }
 
@@ -428,7 +449,7 @@ export function StrokeOrderSlay({
       <p className="lg-round-label">{phaseLabel(flow.phase)} · {promptLabel(prompt.kind)} · {prompt.timerSeconds}s</p>
       <div className="lg-phase-steps" aria-label={`Current presentation: ${promptLabel(prompt.kind)}`}>
         <span className={phase === 'trace' || phase === 'write' ? 'is-current' : 'is-complete'}><b>1</b>{prompt.kind === 'show-copy' ? 'Watch & copy' : 'Write from memory'}</span>
-        <span className={phase === 'compare' && !feedback ? 'is-current' : feedback ? 'is-complete' : ''}><b>2</b>{prompt.kind === 'show-copy' ? 'Continue' : 'Compare'}</span>
+        <span className={phase === 'compare' && !feedback ? 'is-current' : feedback ? 'is-complete' : ''}><b>2</b>{prompt.kind === 'show-copy' ? 'Review' : 'Compare'}</span>
         <span className={feedback ? 'is-current' : ''}><b>3</b>{prompt.kind === 'show-copy' ? 'Next trial' : 'Self-assess'}</span>
       </div>
       {feedback ? <AutoAssessmentFeedback
@@ -436,7 +457,7 @@ export function StrokeOrderSlay({
         lastRound={Boolean(pendingFlow?.complete)}
         correctTitle={correctFeedbackTitle}
         correctDetail={correctFeedbackDetail}
-      /> : prompt.kind === 'show-copy' ? <>
+      /> : prompt.kind === 'show-copy' && phase === 'trace' ? <>
         <div className="lg-stroke-heading">
           <div><p className="lg-kicker">Stroke-order demonstration · {traceDrawing.length}/{round.strokes.length} strokes copied</p><h2>Watch <span lang="zh-Hans">{round.targetText}</span> draw itself, then copy it</h2></div>
           <button className="lg-audio" type="button" onClick={playCurrentNarration}><Volume2 size={18} /> {narrationState === 'playing'
@@ -447,14 +468,14 @@ export function StrokeOrderSlay({
         <div className="lg-stroke-actions">
           <DrawingTools drawing={traceDrawing} setDrawing={setTraceDrawing} />
           <button className="lg-stroke-replay" type="button" onClick={() => setAnimationKey((current) => current + 1)}><Play size={17} /> Replay stroke order</button>
-          <button className="lg-stroke-replay" type="button" onClick={() => completeShowCopy('skip_timer')}>Skip timer</button>
+          <button className="lg-stroke-replay" type="button" onClick={() => reviewShowCopy('skip_timer')}>Review now</button>
           <button className="lg-primary" type="button" disabled={traceDrawing.length < round.strokes.length} onClick={() => {
-            completeShowCopy('manual_compare')
+            reviewShowCopy('manual_compare')
           }}><Save size={18} /> {remainingTraceStrokes > 0
             ? `Lift your finger, then draw ${remainingTraceStrokes} more ${remainingTraceStrokes === 1 ? 'stroke' : 'strokes'}`
-            : 'Copy complete'}</button>
+            : 'Review my copy'}</button>
         </div>
-        <p className="lg-round-label">Next presentation in <PromptCountdown key={`${prompt.id}:copy`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => completeShowCopy('timer')} /></p>
+        <p className="lg-round-label">Review opens in <PromptCountdown key={`${prompt.id}:copy`} promptId={prompt.id} durationSeconds={prompt.timerSeconds} active onComplete={() => reviewShowCopy('timer')} /></p>
       </> : phase === 'write' ? <>
         <div className="lg-stroke-heading">
           <div><p className="lg-kicker">{promptLabel(prompt.kind)} · guide hidden</p><h2>Listen, then write the character from memory</h2></div>
@@ -471,7 +492,7 @@ export function StrokeOrderSlay({
         </div>
       </> : <div className="lg-stroke-review">
         <p className="lg-kicker">Your response is saved</p>
-        <h2>Compare your writing with the real character</h2>
+        <h2>{prompt.kind === 'show-copy' ? 'Review your copy before continuing' : 'Compare your writing with the real character'}</h2>
         <div className="lg-stroke-comparison">
           <section><strong>Your writing</strong><StrokePad round={round} strokes={savedDrawing} showGuide={false} animationKey={animationKey} label={`${savedDrawing.length} saved strokes`} /></section>
           <span aria-hidden="true">→</span>
@@ -481,7 +502,12 @@ export function StrokeOrderSlay({
           ? 'Playing…'
           : narrationState === 'error' ? `Tap to hear ${round.targetText}` : `Hear ${round.targetText}`}</button>
         <p>Does your character match the shape and stroke order?</p>
-        <SelfAssessmentButtons incorrectLabel="Needs correction" correctLabel="I got it" onAnswer={assess} />
+        <p className="lg-review-wait">This screen waits for the student’s answer.</p>
+        <SelfAssessmentButtons
+          incorrectLabel="Needs correction"
+          correctLabel="I got it"
+          onAnswer={prompt.kind === 'show-copy' ? assessShowCopy : assess}
+        />
       </div>}
     </section> : null}
   </LearningGameShell>
