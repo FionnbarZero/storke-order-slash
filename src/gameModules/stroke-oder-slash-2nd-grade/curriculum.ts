@@ -6,4 +6,4 @@ export const secondGradeWritingTargets = [
   { id: 'meihao', text: '美好', meaning: 'beautiful' },
 ] as const
 
-export const secondGradeInitialCopySeconds = 12
+export const secondGradeInitialCopySeconds = 15

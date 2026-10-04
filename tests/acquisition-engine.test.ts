@@ -154,7 +154,7 @@ test('the supplied Grade 2 targets each begin with a stroke-order demonstration'
     assert.equal(flow.phase, 'introduction')
     assert.equal(flow.prompt?.kind, 'show-copy')
     assert.equal(flow.prompt?.word.text, target.text)
-    assert.equal(flow.prompt?.timerSeconds, 12)
+    assert.equal(flow.prompt?.timerSeconds, 15)
 
     while (!flow.complete && flow.targetIndex === targetIndex) {
       flow = transitionAcquisition(
