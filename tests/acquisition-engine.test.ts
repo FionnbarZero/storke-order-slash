@@ -189,6 +189,22 @@ test('stroke-order validation detects a later stroke and a reversed stroke', () 
   )
 })
 
+test('stroke-order validation accepts a rough third stroke that starts at the correct origin', () => {
+  // Official 比 stroke origins/endpoints transformed into the game's 100-unit cell.
+  const biStrokes = [
+    [[29.57, 47.75], [45.77, 43.61]],
+    [[22.64, 27.41], [43.79, 60.17]],
+    [[75.02, 29.75], [57.02, 46.58]],
+    [[50.09, 16.34], [85.10, 62.73]],
+  ] as const
+
+  // The line is deliberately rough, but its start clearly belongs to stroke 3.
+  assert.equal(
+    detectStrokeOrderViolation([[76, 31], [70, 39], [62, 55]], biStrokes, 2),
+    null,
+  )
+})
+
 test('a reviewed prompt returns an assessment for the answered prompt', () => {
   const flow = startAcquisition(targetSet, grade2AcquisitionStrategy, () => 0)
   const answeredPrompt = flow.prompt

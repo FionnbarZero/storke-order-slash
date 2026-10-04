@@ -80,23 +80,43 @@ export function detectStrokeOrderViolation(
   const candidate = features(candidateStroke)
   const expectedFeatures = expectedStrokes.map(features)
   const expected = expectedFeatures[completedStrokeCount]
+  const expectedStartDistance = distance(candidate.start, expected.start)
+
+  // Children rarely reproduce the model's shape precisely. If they begin near
+  // the correct origin, treat the stroke order as correct and leave shape
+  // quality to the learner's review instead of producing a false interruption.
+  if (expectedStartDistance <= 24) return null
+
   const expectedScore = matchScore(candidate, expected)
   const reversedExpectedScore = matchScore(candidate, reversed(expected))
+  const reversedStartDistance = distance(candidate.start, expected.end)
 
-  if (reversedExpectedScore <= 30 && reversedExpectedScore + 10 < expectedScore) return {
+  if (
+    reversedStartDistance <= 15
+    && reversedStartDistance + 10 < expectedStartDistance
+    && reversedExpectedScore <= 30
+    && reversedExpectedScore + 10 < expectedScore
+  ) return {
     expectedIndex: completedStrokeCount,
     matchedIndex: completedStrokeCount,
     reason: 'reversed',
   }
 
   const scores = expectedFeatures.map((reference) => matchScore(candidate, reference))
-  const bestIndex = scores.reduce(
-    (best, score, index) => score < scores[best] ? index : best,
+  const startDistances = expectedFeatures.map((reference) => distance(candidate.start, reference.start))
+  const bestIndex = startDistances.reduce(
+    (best, startDistance, index) => startDistance < startDistances[best] ? index : best,
     0,
   )
   const bestScore = scores[bestIndex]
+  const bestStartDistance = startDistances[bestIndex]
 
-  if (bestIndex !== completedStrokeCount && bestScore <= 36 && bestScore + 10 < expectedScore) return {
+  if (
+    bestIndex !== completedStrokeCount
+    && bestStartDistance <= 15
+    && bestStartDistance + 10 < expectedStartDistance
+    && bestScore <= 44
+  ) return {
     expectedIndex: completedStrokeCount,
     matchedIndex: bestIndex,
     reason: 'out-of-order',
