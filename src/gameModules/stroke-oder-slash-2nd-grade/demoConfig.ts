@@ -16,7 +16,7 @@ import {
   type AcquisitionTargetSet,
 } from '../../acquisition'
 import { strokeOrderIntroductionSequence } from '../../strokeOrderAcquisition'
-import { secondGradeInitialCopySeconds, secondGradeWritingTargets } from './curriculum'
+import { secondGradeTargetTimerOverrides, secondGradeWritingTargets } from './curriculum'
 import type {
   StrokeOrderAcquisitionConfig,
   StrokeOrderAcquisitionTarget,
@@ -116,7 +116,7 @@ export const secondGradeAcquisitionStrategy = {
   introductionSequence: strokeOrderIntroductionSequence,
   timers: {
     ...grade2AcquisitionStrategy.timers,
-    introductionShowCopySeconds: secondGradeInitialCopySeconds,
+    ...secondGradeTargetTimerOverrides,
   },
 } as const satisfies AcquisitionStrategy<StrokeOrderAcquisitionTarget>
 

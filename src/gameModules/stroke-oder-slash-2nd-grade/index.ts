@@ -1,6 +1,11 @@
 export { StrokeOderSlash2ndGrade, StrokeOderSlash2ndGrade as default } from './Game'
 export { gameManifest } from './manifest'
-export { secondGradeInitialCopySeconds, secondGradeWritingTargets } from './curriculum'
+export {
+  secondGradeInitialCopySeconds,
+  secondGradeTargetSeconds,
+  secondGradeTargetTimerOverrides,
+  secondGradeWritingTargets,
+} from './curriculum'
 export {
   secondGradeAcquisitionConfig,
   secondGradeAcquisitionStrategy,

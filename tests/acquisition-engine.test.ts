@@ -14,7 +14,12 @@ import {
 import { strokeOrderIntroductionSequence } from '../src/strokeOrderAcquisition.ts'
 import { gameManifest as originalGameManifest } from '../src/gameModules/stroke-order-slay/manifest.ts'
 import { gameManifest as secondGradeGameManifest } from '../src/gameModules/stroke-oder-slash-2nd-grade/manifest.ts'
-import { secondGradeInitialCopySeconds, secondGradeWritingTargets } from '../src/gameModules/stroke-oder-slash-2nd-grade/curriculum.ts'
+import {
+  secondGradeInitialCopySeconds,
+  secondGradeTargetSeconds,
+  secondGradeTargetTimerOverrides,
+  secondGradeWritingTargets,
+} from '../src/gameModules/stroke-oder-slash-2nd-grade/curriculum.ts'
 
 const targets: AcquisitionTarget[] = [
   {
@@ -155,7 +160,7 @@ test('the supplied Grade 2 targets each begin with a stroke-order demonstration'
     assert.equal(flow.phase, 'introduction')
     assert.equal(flow.prompt?.kind, 'show-copy')
     assert.equal(flow.prompt?.word.text, target.text)
-    assert.equal(flow.prompt?.timerSeconds, 15)
+    assert.equal(flow.prompt?.timerSeconds, 20)
 
     while (!flow.complete && flow.targetIndex === targetIndex) {
       flow = transitionAcquisition(
@@ -170,6 +175,20 @@ test('the supplied Grade 2 targets each begin with a stroke-order demonstration'
 
   assert.equal(flow.complete, true)
   assert.deepEqual(grade2Targets.map((target) => target.text), ['比如', '部分', '更', '方便', '美好'])
+})
+
+test('second-grade targets and Earned DTs use a flat 20-second timer', () => {
+  assert.equal(secondGradeInitialCopySeconds, secondGradeTargetSeconds)
+  assert.deepEqual(secondGradeTargetTimerOverrides, {
+    earnedDtSeconds: 20,
+    introductionShowCopySeconds: 20,
+    introductionHiddenTargetSeconds: 20,
+    expandedStartSeconds: 20,
+    expandedMinimumSeconds: 20,
+    expandedDecrementSeconds: 0,
+    correctionShowCopySeconds: 20,
+    correctionHiddenSeconds: 20,
+  })
 })
 
 test('every independent writing target has a local Mandarin recording', () => {

@@ -6,4 +6,16 @@ export const secondGradeWritingTargets = [
   { id: 'meihao', text: '美好', meaning: 'beautiful' },
 ] as const
 
-export const secondGradeInitialCopySeconds = 15
+export const secondGradeTargetSeconds = 20
+export const secondGradeInitialCopySeconds = secondGradeTargetSeconds
+
+export const secondGradeTargetTimerOverrides = {
+  earnedDtSeconds: secondGradeTargetSeconds,
+  introductionShowCopySeconds: secondGradeTargetSeconds,
+  introductionHiddenTargetSeconds: secondGradeTargetSeconds,
+  expandedStartSeconds: secondGradeTargetSeconds,
+  expandedMinimumSeconds: secondGradeTargetSeconds,
+  expandedDecrementSeconds: 0,
+  correctionShowCopySeconds: secondGradeTargetSeconds,
+  correctionHiddenSeconds: secondGradeTargetSeconds,
+} as const
