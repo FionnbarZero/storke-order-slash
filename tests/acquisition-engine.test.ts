@@ -189,7 +189,7 @@ test('stroke-order validation detects a later stroke and a reversed stroke', () 
   )
 })
 
-test('stroke-order validation accepts a rough third stroke that starts at the correct origin', () => {
+test('stroke-order validation accepts a rough third stroke with broad placement variation', () => {
   // Official 比 stroke origins/endpoints transformed into the game's 100-unit cell.
   const biStrokes = [
     [[29.57, 47.75], [45.77, 43.61]],
@@ -201,6 +201,12 @@ test('stroke-order validation accepts a rough third stroke that starts at the co
   // The line is deliberately rough, but its start clearly belongs to stroke 3.
   assert.equal(
     detectStrokeOrderViolation([[76, 31], [70, 39], [62, 55]], biStrokes, 2),
+    null,
+  )
+  // This correct falling-left stroke begins close to stroke 4's model origin.
+  // Stroke order must not be rejected merely because the writing is shifted.
+  assert.equal(
+    detectStrokeOrderViolation([[52, 18], [45, 27], [34, 36]], biStrokes, 2),
     null,
   )
 })

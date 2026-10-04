@@ -15,6 +15,15 @@ type StrokeFeatures = {
   readonly direction: ValidationPoint
 }
 
+// Order feedback should be conservative: this is a children's writing pad,
+// not a handwriting-placement test. Ambiguous strokes are accepted and left
+// for the learner to compare during Review.
+const expectedOriginTolerance = 40
+const unmistakableOriginTolerance = 8
+const unmistakableOriginAdvantage = 18
+const unmistakableScoreThreshold = 26
+const unmistakableScoreAdvantage = 18
+
 function distance(a: ValidationPoint, b: ValidationPoint) {
   return Math.hypot(a[0] - b[0], a[1] - b[1])
 }
@@ -82,20 +91,18 @@ export function detectStrokeOrderViolation(
   const expected = expectedFeatures[completedStrokeCount]
   const expectedStartDistance = distance(candidate.start, expected.start)
 
-  // Children rarely reproduce the model's shape precisely. If they begin near
-  // the correct origin, treat the stroke order as correct and leave shape
-  // quality to the learner's review instead of producing a false interruption.
-  if (expectedStartDistance <= 24) return null
+  // Accept broad placement variation inside the expected character cell.
+  if (expectedStartDistance <= expectedOriginTolerance) return null
 
   const expectedScore = matchScore(candidate, expected)
   const reversedExpectedScore = matchScore(candidate, reversed(expected))
   const reversedStartDistance = distance(candidate.start, expected.end)
 
   if (
-    reversedStartDistance <= 15
-    && reversedStartDistance + 10 < expectedStartDistance
-    && reversedExpectedScore <= 30
-    && reversedExpectedScore + 10 < expectedScore
+    reversedStartDistance <= unmistakableOriginTolerance
+    && reversedStartDistance + unmistakableOriginAdvantage < expectedStartDistance
+    && reversedExpectedScore <= unmistakableScoreThreshold
+    && reversedExpectedScore + unmistakableScoreAdvantage < expectedScore
   ) return {
     expectedIndex: completedStrokeCount,
     matchedIndex: completedStrokeCount,
@@ -113,9 +120,10 @@ export function detectStrokeOrderViolation(
 
   if (
     bestIndex !== completedStrokeCount
-    && bestStartDistance <= 15
-    && bestStartDistance + 10 < expectedStartDistance
-    && bestScore <= 44
+    && bestStartDistance <= unmistakableOriginTolerance
+    && bestStartDistance + unmistakableOriginAdvantage < expectedStartDistance
+    && bestScore <= unmistakableScoreThreshold
+    && bestScore + unmistakableScoreAdvantage < expectedScore
   ) return {
     expectedIndex: completedStrokeCount,
     matchedIndex: bestIndex,
